@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Máy Tính - Tứ Phân Vị & Quét Dữ Liệu (OCR)</title>
+    
+    <!-- Cấu hình MathJax đặt trước khi gọi thư viện -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <!-- Thư viện OCR Tesseract.js -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --text-color: #e6edf3;
+            --accent-color: #58a6ff;
+            --highlight-color: #ff7b72;
+            --btn-base: #21262d;
+            --btn-face: #30363d;
+            --calc-bg: #2b2d31;
+            --calc-screen: #9fb399;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header & Controls */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #30363d;
+        }
+
+        .btn-action {
+            background: linear-gradient(145deg, #1f6feb, #1158c7);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4);
+            transition: all 0.1s;
+        }
+
+        .btn-action:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 #0d419d, 0 2px 5px rgba(0,0,0,0.4);
+        }
+        
+        .btn-action:disabled {
+            background: #444;
+            color: #888;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(145deg, #da3633, #b62324);
+            box-shadow: 0 4px #8b151a, 0 5px 15px rgba(0,0,0,0.4);
+        }
+        
+        .btn-danger:active {
+            box-shadow: 0 0 #8b151a, 0 2px 5px rgba(0,0,0,0.4);
+        }
+
+        /* OCR Area */
+        .ocr-panel {
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            border: 1px solid #30363d;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .upload-area {
+            border: 2px dashed #30363d;
+            border-radius: 10px;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-color);
+            background-color: rgba(88, 166, 255, 0.05);
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            max-height: 250px;
+            margin-top: 15px;
+            border-radius: 8px;
+            display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 15px;
+            color: #7ee787;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Layout Main */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            border: 1px solid #30363d;
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+            margin-top: 0;
+            color: var(--accent-color);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        h1 { font-size: 28px; color: #d2a8ff; }
+        .subtitle { text-align: center; font-style: italic; color: #8b949e; margin-bottom: 20px; }
+
+        /* Data Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: #0d1117;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #30363d;
+            padding: 12px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        th { 
+            background: #21262d; 
+            color: var(--accent-color);
+            white-space: nowrap; 
+        }
+        
+        tr:nth-child(even) { background: #161b22; }
+
+        /* Math Formulas HTML/CSS */
+        .math-block {
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .frac {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            margin: 0 0.2em;
+        }
+
+        .frac > span { display: block; padding: 0.1em; }
+        .frac span.top { border-bottom: 1px solid var(--text-color); }
+        .math-hl { color: var(--highlight-color); font-weight: bold; }
+
+        /* Calculator UI */
+        .calculator-container {
+            background: #1a1a1a;
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: inset 0 2px 10px rgba(255,255,255,0.1), 0 15px 35px rgba(0,0,0,0.8);
+            border: 2px solid #333;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .calc-screen {
+            background: var(--calc-screen);
+            border-radius: 10px;
+            height: 90px;
+            padding: 15px;
+            margin-bottom: 25px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-family: 'Courier New', Courier, monospace;
+            color: #111;
+            border: 3px solid #111;
+        }
+
+        .calc-expression { font-size: 18px; text-align: left; letter-spacing: 2px; }
+        .calc-result { font-size: 32px; text-align: right; font-weight: bold; }
+
+        .calc-keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .calc-btn {
+            background: var(--btn-face);
+            color: white;
+            border: none;
+            padding: 15px 0;
+            font-size: 22px;
+            font-family: 'Segoe UI', sans-serif;
+            border-radius: 8px;
+            box-shadow: 0 6px #15181e, 0 8px 15px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .calc-btn.hl-op { background: #3b3b4d; color: #58a6ff; }
+        .calc-btn.hl-eq { background: #238636; box-shadow: 0 6px #134e1d, 0 8px 15px rgba(0,0,0,0.5); }
+        .calc-btn.hl-func { background: #8b949e; color: #000; }
+
+        .calc-btn.active {
+            transform: translateY(6px);
+            box-shadow: 0 0px #15181e, 0 2px 5px rgba(0,0,0,0.5) !important;
+            background: var(--highlight-color);
+            color: white;
+        }
+
+        .sim-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .sim-instruction {
+            text-align: center;
+            color: var(--highlight-color);
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 15px;
+            min-height: 28px;
+        }
+
+        .footer-watermark {
+            position: fixed;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            opacity: 0.2;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <div>
+            <button class="btn-action" onclick="toggleFullScreen()">⛶ Toàn Màn Hình</button>
+        </div>
+        <div style="font-weight: bold; color: var(--accent-color); font-size: 18px;">
+            Mô Phỏng Trực Quan
+        </div>
+        <div>
+            <button class="btn-action btn-danger" onclick="closeWindow()">✖ Thoát & Đóng</button>
+        </div>
+    </div>
+
+    <h1>BẢNG THỐNG KÊ DOANH SỐ ĐIỆN THOẠI OPPO</h1>
+    <div class="subtitle">Toán 11 • Tứ phân vị của mẫu số liệu ghép nhóm (Tháng 9)</div>
+
+    <!-- Tích hợp tính năng OCR Quét Dữ Liệu -->
+    <div class="ocr-panel">
+        <h2>📷 Tiện Ích Nhận Diện Bảng Số Liệu (OCR)</h2>
+        <p style="color: #8b949e; margin-bottom: 20px;">
+            Tải ảnh bảng số liệu để hệ thống tự động quét và trích xuất dữ liệu thô.
+        </p>
+        
+        <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <p style="font-size: 16px; margin: 0; color: #8b949e;">📸 Bấm vào đây để tải lên ảnh chụp bảng số liệu</p>
+            <input type="file" id="fileInput" accept="image/png, image/jpeg" style="display: none;">
+            <img id="imagePreview" src="" alt="Ảnh xem trước">
+        </div>
+
+        <button id="scanBtn" class="btn-action" onclick="startOCR()" style="display: none; margin: 0 auto;">🔍 Bắt Đầu Quét Dữ Liệu</button>
+        <div id="statusText" style="margin-top: 15px; font-style: italic; color: #d2a8ff;"></div>
+        
+        <div class="result-box" id="resultText"></div>
+    </div>
+
+    <div class="main-content">
+        <!-- Left Panel: Theory and Data -->
+        <div class="panel">
+            <h2>Bảng Số Liệu & Công Thức</h2>
+            
+            <table>
+                <tr>
+                    <th>Doanh số</th>
+                    <td>[18; 20]</td>
+                    <td>[21; 23]</td>
+                    <td>[24; 26]</td>
+                    <td>[27; 29]</td>
+                    <td>[30; 32]</td>
+                </tr>
+                <tr>
+                    <th>Số nhân viên ($f$)</th>
+                    <td>2</td>
+                    <td>5</td>
+                    <td>8</td>
+                    <td>3</td>
+                    <td>2</td>
+                </tr>
+                <tr>
+                    <th>Tần số tích lũy ($cf$)</th>
+                    <td>2</td>
+                    <td>7</td>
+                    <td>15</td>
+                    <td>18</td>
+                    <td>20</td>
+                </tr>
+            </table>
+
+            <div class="math-block" style="text-align: center;">
+                <p style="margin-bottom:5px; color:#8b949e;">Phương pháp chung tính Q<sub>k</sub> (k=1,2,3):</p>
+                Q<sub>k</sub> = a + 
+                <span class="frac">
+                    <span class="top"><span class="frac"><span class="top">k.n</span><span class="bottom">4</span></span> - F<sub>max</sub></span>
+                    <span class="bottom">f</span>
+                </span>
+                × (b - a)
+            </div>
+
+            <div class="math-block">
+                <span style="color:#d2a8ff; font-weight:bold;">❶ Tính Q<sub>1</sub>:</span><br>
+                n/4 = 5 ➔ F<sub>max</sub> = 2 ➔ nhóm [21; 23], f = 5<br>
+                Q<sub>1</sub> = 21 + 
+                <span class="frac"><span class="top">5 - 2</span><span class="bottom">5</span></span> × 2 = <span class="math-hl">22.2</span>
+            </div>
+
+            <div class="math-block">
+                <span style="color:#d2a8ff; font-weight:bold;">❷ Tính Q<sub>2</sub> (Trung vị):</span><br>
+                2n/4 = 10 ➔ F<sub>max</sub> = 7 ➔ nhóm [24; 26], f = 8<br>
+                Q<sub>2</sub> = 24 + 
+                <span class="frac"><span class="top">10 - 7</span><span class="bottom">8</span></span> × 2 = <span class="math-hl">24.75</span>
+            </div>
+
+            <div class="math-block">
+                <span style="color:#d2a8ff; font-weight:bold;">❸ Tính Q<sub>3</sub>:</span><br>
+                3n/4 = 15 ➔ F<sub>max</sub> = 7 ➔ nhóm [24; 26], f = 8<br>
+                Q<sub>3</sub> = 24 + 
+                <span class="frac"><span class="top">15 - 7</span><span class="bottom">8</span></span> × 2 = <span class="math-hl">26</span>
+            </div>
+            
+        </div>
+
+        <!-- Right Panel: Calculator Simulation -->
+        <div class="panel">
+            <h2>Mô Phỏng Thao Tác Bấm Máy</h2>
+            <div id="sim-title" style="text-align:center; margin-bottom: 15px; font-weight:bold; color:var(--accent-color);">
+                Chuẩn bị tính Q1...
+            </div>
+            
+            <div class="calculator-container">
+                <div class="calc-screen">
+                    <div class="calc-expression" id="screen-expr"></div>
+                    <div class="calc-result" id="screen-res"></div>
+                </div>
+
+                <div class="calc-keys">
+                    <button class="calc-btn hl-func" id="btn-AC">AC</button>
+                    <button class="calc-btn hl-func" id="btn-DEL">DEL</button>
+                    <button class="calc-btn hl-func" id="btn-(">(</button>
+                    <button class="calc-btn hl-func" id="btn-)">)</button>
+                    
+                    <button class="calc-btn" id="btn-7">7</button>
+                    <button class="calc-btn" id="btn-8">8</button>
+                    <button class="calc-btn" id="btn-9">9</button>
+                    <button class="calc-btn hl-op" id="btn-÷">÷</button>
+                    
+                    <button class="calc-btn" id="btn-4">4</button>
+                    <button class="calc-btn" id="btn-5">5</button>
+                    <button class="calc-btn" id="btn-6">6</button>
+                    <button class="calc-btn hl-op" id="btn-×">×</button>
+                    
+                    <button class="calc-btn" id="btn-1">1</button>
+                    <button class="calc-btn" id="btn-2">2</button>
+                    <button class="calc-btn" id="btn-3">3</button>
+                    <button class="calc-btn hl-op" id="btn--">-</button>
+                    
+                    <button class="calc-btn" id="btn-0">0</button>
+                    <button class="calc-btn" id="btn-.">.</button>
+                    <button class="calc-btn hl-eq" id="btn-=">=</button>
+                    <button class="calc-btn hl-op" id="btn-+">+</button>
+                </div>
+            </div>
+
+            <div class="sim-instruction" id="instruction">Bấm "Tiếp" để bắt đầu thao tác tính Q1</div>
+            
+            <div class="sim-controls">
+                <button class="btn-action" onclick="resetSim()" style="background: linear-gradient(145deg, #444, #222);">Làm lại từ đầu</button>
+                <button class="btn-action" onclick="nextStep()" id="btn-next" style="padding: 10px 40px; font-size: 18px;">Tiếp ➔</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer-watermark">
+    Tác giả: Vũ Trung Thành - Tổ Toán-Tin, THPT Bình Giang, Zalo: 0979791802
+</div>
+
+<script>
+    // --- Logic Quét Ảnh (OCR) ---
+    const fileInput = document.getElementById('fileInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const scanBtn = document.getElementById('scanBtn');
+    const statusText = document.getElementById('statusText');
+    const resultBox = document.getElementById('resultText');
+
+    let selectedImageFile = null;
+
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+            selectedImageFile = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'inline-block';
+                scanBtn.style.display = 'inline-block';
+                statusText.innerText = "Đã tải ảnh thành công. Sẵn sàng quét!";
+                resultBox.style.display = 'none';
+            }
+            reader.readAsDataURL(selectedImageFile);
+        }
+    });
+
+    async function startOCR() {
+        if (!selectedImageFile) return;
+
+        scanBtn.disabled = true;
+        scanBtn.innerText = "Đang xử lý phân tích ảnh...";
+        statusText.innerText = "Đang khởi tạo máy quét (có thể mất 3-10 giây)...";
+        resultBox.style.display = 'block';
+        resultBox.innerText = "Đang xử lý...";
+
+        try {
+            const result = await Tesseract.recognize(
+                selectedImageFile,
+                'vie+eng', 
+                {
+                    logger: m => {
+                        if(m.status === "recognizing text") {
+                            statusText.innerText = `Đang trích xuất dữ liệu: ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                }
+            );
+
+            statusText.innerHTML = "<span style='color: #7ee787;'>✔ Quét thành công! Anh có thể đối chiếu dữ liệu dưới đây.</span>";
+            let text = result.data.text;
+            
+            if(!text || text.trim() === "") {
+                resultBox.innerHTML = "<span style='color: #ff7b72;'>Hệ thống không tìm thấy chữ/số nào hợp lệ trong bức ảnh này.</span>";
+            } else {
+                resultBox.innerText = text;
+            }
+        } catch (error) {
+            console.error(error);
+            statusText.innerHTML = "<span style='color: #ff7b72;'>❌ Lỗi: Quá trình quét bị gián đoạn.</span>";
+        } finally {
+            scanBtn.disabled = false;
+            scanBtn.innerText = "🔍 Bắt Đầu Quét Lại";
+        }
+    }
+
+    // --- Logic Giả Lập Bấm Máy Tính ---
+    const sequences = [
+        {
+            title: "Tính Tứ phân vị thứ nhất (Q1)",
+            steps: ["2","1","+","(","5","-","2",")","÷","5","×","2","="],
+            result: "22.2"
+        },
+        {
+            title: "Tính Trung vị (Q2)",
+            steps: ["2","4","+","(","1","0","-","7",")","÷","8","×","2","="],
+            result: "24.75"
+        },
+        {
+            title: "Tính Tứ phân vị thứ ba (Q3)",
+            steps: ["2","4","+","(","1","5","-","7",")","÷","8","×","2","="],
+            result: "26"
+        }
+    ];
+
+    let currentSeq = 0;
+    let currentStep = 0;
+    let currentExpression = "";
+    
+    const elExpr = document.getElementById("screen-expr");
+    const elRes = document.getElementById("screen-res");
+    const elTitle = document.getElementById("sim-title");
+    const elInst = document.getElementById("instruction");
+    const btnNext = document.getElementById("btn-next");
+
+    function updateUI() {
+        if(currentSeq >= sequences.length) {
+            elTitle.innerText = "Đã hoàn thành!";
+            elInst.innerText = "Bạn đã thực hiện xong các bước bấm máy.";
+            btnNext.disabled = true;
+            btnNext.style.opacity = 0.5;
+            return;
+        }
+        
+        elTitle.innerText = sequences[currentSeq].title;
+        btnNext.disabled = false;
+        btnNext.style.opacity = 1;
+    }
+
+    function animateButton(btnId) {
+        const btn = document.getElementById("btn-" + btnId);
+        if(btn) {
+            btn.classList.add("active");
+            setTimeout(() => {
+                btn.classList.remove("active");
+            }, 300);
+        }
+    }
+
+    function nextStep() {
+        if (currentSeq >= sequences.length) return;
+
+        const seq = sequences[currentSeq];
+        
+        if (currentStep === 0 && currentExpression === "") {
+            elExpr.innerText = "";
+            elRes.innerText = "";
+        }
+
+        if (currentStep < seq.steps.length) {
+            let key = seq.steps[currentStep];
+            animateButton(key);
+            
+            if (key !== "=") {
+                currentExpression += key;
+                elExpr.innerText = currentExpression;
+                elInst.innerText = `Máy tự động bấm phím: [ ${key} ]`;
+            } else {
+                elRes.innerText = seq.result;
+                elInst.innerText = `Bấm phím [ = ] ra kết quả: ${seq.result}`;
+            }
+            
+            currentStep++;
+            
+            if (currentStep === seq.steps.length) {
+                btnNext.innerHTML = "Tính Giá Trị Tiếp Theo ➔";
+                btnNext.style.background = "linear-gradient(145deg, #238636, #134e1d)";
+                btnNext.style.boxShadow = "0 4px #0d3815, 0 5px 15px rgba(0,0,0,0.4)";
+            } else {
+                btnNext.innerHTML = "Tiếp ➔";
+                btnNext.style.background = "linear-gradient(145deg, #1f6feb, #1158c7)";
+                btnNext.style.boxShadow = "0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4)";
+            }
+        } else {
+            currentSeq++;
+            currentStep = 0;
+            currentExpression = "";
+            animateButton("AC");
+            elExpr.innerText = "";
+            elRes.innerText = "";
+            updateUI();
+            
+            if (currentSeq < sequences.length) {
+                elInst.innerText = `Đã xóa màn hình. Bấm "Tiếp" để bắt đầu tính Q${currentSeq + 1}`;
+                btnNext.innerHTML = "Bắt đầu ➔";
+                btnNext.style.background = "linear-gradient(145deg, #1f6feb, #1158c7)";
+                btnNext.style.boxShadow = "0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4)";
+            }
+        }
+    }
+
+    function resetSim() {
+        currentSeq = 0;
+        currentStep = 0;
+        currentExpression = "";
+        elExpr.innerText = "";
+        elRes.innerText = "";
+        animateButton("AC");
+        elInst.innerText = `Bấm "Tiếp" để bắt đầu thao tác tính Q1`;
+        btnNext.innerHTML = "Tiếp ➔";
+        btnNext.style.background = "linear-gradient(145deg, #1f6feb, #1158c7)";
+        btnNext.style.boxShadow = "0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4)";
+        updateUI();
+    }
+
+    // --- Các hàm hệ thống trình duyệt ---
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                alert(`Lỗi khi mở toàn màn hình: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    function closeWindow() {
+        if (confirm("Bạn có chắc chắn muốn thoát mô phỏng?")) {
+            window.close();
+            document.body.innerHTML = "<h1 style='text-align:center; margin-top:20%; color:var(--text-color);'>ĐÃ THOÁT MÔ PHỎNG. VUI LÒNG ĐÓNG TAB!</h1>";
+        }
+    }
+
+    // Init
+    updateUI();
+</script>
+</body>
+</html>

@@ -3,53 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mô Phỏng - Tứ Phân Vị Của Mẫu Số Liệu Ghép Nhóm</title>
+    <title>Mô Phỏng Máy Tính - Tứ Phân Vị Của Mẫu Số Liệu Ghép Nhóm</title>
+    
+    <!-- Cấu hình MathJax đặt trước khi gọi thư viện -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
     <style>
-        /* CSS Variables cho Theme mới hài hòa và dịu mắt hơn */
         :root {
-            /* Theme Chân thực (Dark Professional) */
             --bg-color: #0d1117;
             --panel-bg: #161b22;
             --text-color: #e6edf3;
-            --primary-color: #58a6ff;
-            --secondary-color: #d2a8ff;
-            --accent-color: #ff7b72;
-            --border-color: #30363d;
-            --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-            --step-bg: #21262d;
-            --note-bg: rgba(255, 123, 114, 0.08);
-            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            --math-font: 'Times New Roman', Times, serif;
-        }
-
-        [data-theme="textbook"] {
-            /* Theme Sách giáo khoa (Light/Clean) */
-            --bg-color: #f6f8fa;
-            --panel-bg: #ffffff;
-            --text-color: #1f2328;
-            --primary-color: #0969da;
-            --secondary-color: #8250df;
-            --accent-color: #cf222e;
-            --border-color: #d0d7de;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            --step-bg: #f3f4f6;
-            --note-bg: #ffebe9;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+            --accent-color: #58a6ff;
+            --highlight-color: #ff7b72;
+            --btn-base: #21262d;
+            --btn-face: #30363d;
+            --calc-bg: #2b2d31;
+            --calc-screen: #9fb399;
         }
 
         body {
-            font-family: var(--font-main);
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            padding: 20px;
-            padding-bottom: 80px;
-            transition: all 0.3s ease;
+            padding-bottom: 80px; /* Space for watermark */
         }
 
         .container {
@@ -57,385 +44,493 @@
             margin: 0 auto;
         }
 
-        /* Top Bar */
+        /* Header & Controls */
         .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
             background: var(--panel-bg);
-            padding: 15px 25px;
             border-radius: 12px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.1s, filter 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #30363d;
         }
 
         .btn-action {
-            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            background: linear-gradient(145deg, #1f6feb, #1158c7);
             color: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4);
+            transition: all 0.1s;
+        }
+
+        .btn-action:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 #0d419d, 0 2px 5px rgba(0,0,0,0.4);
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, #da3633, #b62324);
-            color: white;
+            background: linear-gradient(145deg, #da3633, #b62324);
+            box-shadow: 0 4px #8b151a, 0 5px 15px rgba(0,0,0,0.4);
+        }
+        
+        .btn-danger:active {
+            box-shadow: 0 0 #8b151a, 0 2px 5px rgba(0,0,0,0.4);
         }
 
-        .btn-theme {
-            background: var(--step-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
-
-        /* Header */
-        .header-title {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header-title h1 {
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
-            color: var(--primary-color);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 8px;
-        }
-
-        .header-title h2 {
-            font-size: clamp(1.1rem, 2vw, 1.4rem);
-            color: var(--secondary-color);
-            font-weight: 500;
-        }
-
-        /* Main Content Grid - Tinh chỉnh tỷ lệ cột cân đối hơn */
-        .grid-layout {
+        /* Layout Main */
+        .main-content {
             display: grid;
-            grid-template-columns: 1.25fr 1fr;
-            gap: 30px;
+            /* Cập nhật tỷ lệ cột: Bên trái lớn hơn bên phải để bảng số liệu rộng rãi hơn */
+            grid-template-columns: 1.3fr 1fr;
+            gap: 25px;
         }
 
-        @media (max-width: 992px) {
-            .grid-layout {
+        @media (max-width: 900px) {
+            .main-content {
                 grid-template-columns: 1fr;
             }
         }
 
-        .card {
+        .panel {
             background: var(--panel-bg);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            border: 1px solid #30363d;
         }
 
-        .card h3 {
-            color: var(--primary-color);
-            font-size: 1.3rem;
+        h1, h2, h3 {
+            text-align: center;
+            margin-top: 0;
+            color: var(--accent-color);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        h1 { font-size: 28px; color: #d2a8ff; }
+        .subtitle { text-align: center; font-style: italic; color: #8b949e; margin-bottom: 20px; }
+
+        /* Data Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
             margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        /* Steps list */
-        .step {
-            background: var(--step-bg);
-            padding: 12px 18px;
+            background: #0d1117;
             border-radius: 8px;
-            margin-bottom: 12px;
-            border-left: 4px solid var(--secondary-color);
-            font-size: 1.05rem;
+            overflow: hidden;
         }
 
-        .step b {
-            color: var(--secondary-color);
+        th, td {
+            border: 1px solid #30363d;
+            padding: 12px;
+            text-align: center;
+            font-size: 16px;
         }
 
-        /* Math Display CSS - Vector quality */
-        .math {
-            font-family: var(--math-font);
-            font-style: italic;
-            font-size: 1.1em;
-        }
-
-        .math-block {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0,0,0,0.1);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px dashed var(--border-color);
-            margin: 20px 0;
-            font-size: 1.8rem;
-            overflow-x: auto;
+        th { 
+            background: #21262d; 
+            color: var(--accent-color);
+            /* Bổ sung white-space nowrap để chống rớt dòng cho tiêu đề cột */
+            white-space: nowrap; 
         }
         
-        [data-theme="textbook"] .math-block {
-            background: #fff;
-            border: 1px solid #d0d7de;
+        tr:nth-child(even) { background: #161b22; }
+
+        /* Math Formulas HTML/CSS */
+        .math-block {
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            margin-bottom: 15px;
+            font-size: 18px;
         }
 
         .frac {
-            display: inline-flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            display: inline-block;
             vertical-align: middle;
+            text-align: center;
             margin: 0 0.2em;
         }
 
-        .frac > span {
-            display: block;
-            padding: 0.1em 0.3em;
+        .frac > span { display: block; padding: 0.1em; }
+        .frac span.top { border-bottom: 1px solid var(--text-color); }
+        .math-hl { color: var(--highlight-color); font-weight: bold; }
+
+        /* Calculator UI */
+        .calculator-container {
+            background: #1a1a1a;
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: inset 0 2px 10px rgba(255,255,255,0.1), 0 15px 35px rgba(0,0,0,0.8);
+            border: 2px solid #333;
+            max-width: 400px;
+            margin: 0 auto;
         }
 
-        .frac .top {
-            border-bottom: 2px solid var(--text-color);
-        }
-
-        .frac-sm {
-            font-size: 0.7em;
-        }
-
-        .sub {
-            vertical-align: sub;
-            font-size: 0.6em;
-            font-style: normal;
-        }
-
-        /* Variables Explanation */
-        .var-list {
-            list-style: none;
-        }
-
-        .var-list li {
-            margin-bottom: 12px;
-            font-size: 1.05rem;
+        .calc-screen {
+            background: var(--calc-screen);
+            border-radius: 10px;
+            height: 90px;
+            padding: 15px;
+            margin-bottom: 25px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
             display: flex;
-            align-items: baseline;
-            gap: 12px;
+            flex-direction: column;
+            justify-content: space-between;
+            font-family: 'Courier New', Courier, monospace;
+            color: #111;
+            border: 3px solid #111;
         }
 
-        .var-badge {
-            background: var(--step-bg);
-            color: var(--primary-color);
-            border: 1px solid var(--border-color);
-            padding: 2px 10px;
-            border-radius: 6px;
-            font-family: var(--math-font);
-            font-style: italic;
-            font-weight: bold;
-            min-width: 55px;
-            text-align: center;
+        .calc-expression { font-size: 18px; text-align: left; letter-spacing: 2px; }
+        .calc-result { font-size: 32px; text-align: right; font-weight: bold; }
+
+        .calc-keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
         }
 
-        /* Note Box */
-        .note-box {
-            background: var(--note-bg);
-            border: 1px solid var(--accent-color);
-            padding: 20px;
+        .calc-btn {
+            background: var(--btn-face);
+            color: white;
+            border: none;
+            padding: 15px 0;
+            font-size: 22px;
+            font-family: 'Segoe UI', sans-serif;
             border-radius: 8px;
-            margin-top: 25px;
-            position: relative;
-        }
-
-        .note-title {
-            position: absolute;
-            top: -12px;
-            left: 20px;
-            background: var(--accent-color);
-            color: #fff;
-            padding: 2px 12px;
-            border-radius: 20px;
+            box-shadow: 0 6px #15181e, 0 8px 15px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             font-weight: 600;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
         }
 
-        /* Simulation/Interactive */
-        .sim-container {
-            margin-top: 35px;
+        .calc-btn.hl-op { background: #3b3b4d; color: #58a6ff; }
+        .calc-btn.hl-eq { background: #238636; box-shadow: 0 6px #134e1d, 0 8px 15px rgba(0,0,0,0.5); }
+        .calc-btn.hl-func { background: #8b949e; color: #000; }
+
+        .calc-btn.active {
+            transform: translateY(6px);
+            box-shadow: 0 0px #15181e, 0 2px 5px rgba(0,0,0,0.5) !important;
+            background: var(--highlight-color);
+            color: white;
+        }
+
+        /* Simulation Controls */
+        .sim-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .sim-instruction {
             text-align: center;
-        }
-
-        .interactive-box {
-            background: var(--step-bg);
-            padding: 20px;
-            border-radius: 8px;
-            display: inline-block;
-            margin-bottom: 20px;
-            border: 1px solid var(--border-color);
-        }
-
-        select, input {
-            padding: 6px 12px;
-            font-size: 1rem;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-color);
-            color: var(--text-color);
-            margin: 0 8px;
-        }
-
-        #result-display {
-            font-size: 1.4rem;
+            color: var(--highlight-color);
             font-weight: bold;
-            color: var(--accent-color);
+            font-size: 18px;
             margin-top: 15px;
-            min-height: 80px;
+            min-height: 28px;
         }
 
-        /* Watermark */
-        .watermark {
+        /* Footer Watermark */
+        .footer-watermark {
             position: fixed;
             bottom: 10px;
             left: 0;
             width: 100%;
             text-align: center;
             opacity: 0.2;
-            font-size: clamp(0.8rem, 2vw, 1rem);
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
             pointer-events: none;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
         }
     </style>
 </head>
-<body data-theme="realistic">
+<body>
 
 <div class="container">
     <div class="top-bar">
-        <button class="btn btn-theme" onclick="toggleTheme()" id="btn-theme">
-            🔄 Đổi Giao Diện: Chân Thực
-        </button>
-        <button class="btn btn-action" onclick="toggleFullScreen()">
-            ⛶ Toàn Màn Hình
-        </button>
-        <button class="btn btn-danger" onclick="closeBrowser()">
-            ✖ Thoát và Đóng
-        </button>
+        <div>
+            <button class="btn-action" onclick="toggleFullScreen()">⛶ Toàn Màn Hình</button>
+        </div>
+        <div style="font-weight: bold; color: var(--accent-color); font-size: 18px;">
+            Mô Phỏng Trực Quan
+        </div>
+        <div>
+            <button class="btn-action btn-danger" onclick="closeWindow()">✖ Thoát & Đóng</button>
+        </div>
     </div>
 
-    <div class="header-title">
-        <h1>Ý TƯỞNG NHỎ</h1>
-        <h2>Gộp ba công thức thành một - Tứ phân vị của mẫu số liệu ghép nhóm</h2>
-    </div>
+    <h1>MỖI NGÀY, LỚP MÌNH DÀNH BAO LÂU CHO ÂM NHẠC?</h1>
+    <div class="subtitle">Toán 11 • Tứ phân vị của mẫu số liệu ghép nhóm (Khảo sát 40 học sinh)</div>
 
-    <div class="grid-layout">
-        <div class="card">
-            <h3>Quy Trình Tính Toán</h3>
+    <div class="main-content">
+        <!-- Left Panel: Theory and Data -->
+        <div class="panel">
+            <h2>Bảng Số Liệu & Công Thức</h2>
             
-            <div class="step">
-                <b>Bước 1:</b> Tính tần số tích lũy của bảng số liệu.
-            </div>
-            
-            <div class="step">
-                <b>Bước 2:</b> Tính <span class="math frac frac-sm"><span class="top">k.n</span><span>4</span></span> , với <span class="math">k = 1, 2, 3</span>.
-            </div>
+            <table>
+                <tr>
+                    <th>Thời gian (phút)</th>
+                    <td>[0; 15)</td>
+                    <td>[15; 30)</td>
+                    <td>[30; 45)</td>
+                    <td>[45; 60)</td>
+                    <td>[60; 75)</td>
+                </tr>
+                <tr>
+                    <th>Số học sinh ($f$)</th>
+                    <td>4</td>
+                    <td>10</td>
+                    <td>12</td>
+                    <td>10</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <th>Tần số tích lũy ($cf$)</th>
+                    <td>4</td>
+                    <td>14</td>
+                    <td>26</td>
+                    <td>36</td>
+                    <td>40</td>
+                </tr>
+            </table>
 
-            <div class="step">
-                <b>Bước 3:</b> Chọn <span class="math">F<span class="sub">max</span></span> là mốc tích lũy lớn nhất <b>không vượt quá</b> <span class="math frac frac-sm"><span class="top">k.n</span><span>4</span></span>. <br>Lấy nhóm liền sau <span class="math">[a; b)</span>, có tần số <span class="math">f > 0</span>.
-            </div>
-
-            <div class="step">
-                <b>Bước 4:</b> Thay các giá trị vào công thức chung:
+            <div class="math-block" style="text-align: center;">
+                <p style="margin-bottom:5px; color:#8b949e;">Phương pháp chung tính Q<sub>k</sub> (k=1,2,3):</p>
+                Q<sub>k</sub> = a + 
+                <span class="frac">
+                    <span class="top"><span class="frac"><span class="top">k.n</span><span class="bottom">4</span></span> - F<sub>max</sub></span>
+                    <span class="bottom">f</span>
+                </span>
+                × (b - a)
             </div>
 
             <div class="math-block">
-                <span class="math">Q<span class="sub">k</span></span> &nbsp;=&nbsp; <span class="math">a</span> &nbsp;+&nbsp;
-                <span class="math frac">
-                    <span class="top">
-                        <span class="frac frac-sm"><span class="top">k.n</span><span>4</span></span> &nbsp;-&nbsp; F<span class="sub">max</span>
-                    </span>
-                    <span>f</span>
-                </span>
-                &nbsp;&times;&nbsp; (<span class="math">b</span> &nbsp;-&nbsp; <span class="math">a</span>)
+                <span style="color:#d2a8ff; font-weight:bold;">❶ Tính Q<sub>1</sub>:</span><br>
+                n/4 = 10 ➔ F<sub>max</sub> = 4 ➔ nhóm [15; 30), f = 10<br>
+                Q<sub>1</sub> = 15 + 
+                <span class="frac"><span class="top">10 - 4</span><span class="bottom">10</span></span> × 15 = <span class="math-hl">24</span>
             </div>
 
-            <div class="note-box">
-                <div class="note-title">LƯU Ý QUAN TRỌNG</div>
-                <p>Nếu mốc tích lũy đầu tiên <span class="math">f<span class="sub">1</span></span> thỏa mãn:</p>
-                <div style="text-align: center; font-size: 1.2rem; margin: 10px 0;">
-                    <span class="math frac"><span class="top">k.n</span><span>4</span></span> &nbsp;-&nbsp; <span class="math">f<span class="sub">1</span></span> &nbsp;&lt;&nbsp; 0
-                </div>
-                <p>Thì quy ước <b><span class="math">F<span class="sub">max</span> = 0</span></b> và <span class="math">[a; b)</span> chính là <b>nhóm đầu tiên</b>.</p>
+            <div class="math-block">
+                <span style="color:#d2a8ff; font-weight:bold;">❷ Tính Q<sub>2</sub> (Trung vị):</span><br>
+                2n/4 = 20 ➔ F<sub>max</sub> = 14 ➔ nhóm [30; 45), f = 12<br>
+                Q<sub>2</sub> = 30 + 
+                <span class="frac"><span class="top">20 - 14</span><span class="bottom">12</span></span> × 15 = <span class="math-hl">37.5</span>
             </div>
+
+            <div class="math-block">
+                <span style="color:#d2a8ff; font-weight:bold;">❸ Tính Q<sub>3</sub>:</span><br>
+                3n/4 = 30 ➔ F<sub>max</sub> = 26 ➔ nhóm [45; 60), f = 10<br>
+                Q<sub>3</sub> = 45 + 
+                <span class="frac"><span class="top">30 - 26</span><span class="bottom">10</span></span> × 15 = <span class="math-hl">51</span>
+            </div>
+            
+            <p style="text-align:center; font-style:italic; color:#8b949e;">
+                Ước lượng: Khoảng 50% học sinh nghe nhạc từ 24 đến 51 phút.
+            </p>
         </div>
 
-        <div class="card">
-            <h3>Giải Thích Các Đại Lượng</h3>
-            <ul class="var-list">
-                <li><span class="var-badge">k</span> Là chỉ số của tứ phân vị cần tìm (1, 2 hoặc 3).</li>
-                <li><span class="var-badge">n</span> Tổng số quan sát (cỡ mẫu).</li>
-                <li><span class="var-badge">[a; b)</span> Là nhóm chứa tứ phân vị thứ k.</li>
-                <li><span class="var-badge">a</span> Mút trái (giá trị bắt đầu) của nhóm chứa tứ phân vị.</li>
-                <li><span class="var-badge">b - a</span> Độ dài của nhóm.</li>
-                <li><span class="var-badge">f</span> Tần số của nhóm chứa tứ phân vị.</li>
-                <li><span class="var-badge">F<span class="sub">max</span></span> Tần số tích lũy của nhóm <b>liền trước</b> nhóm chứa tứ phân vị.</li>
-            </ul>
-
-            <div class="sim-container">
-                <h3>Mô Phỏng Trực Quan Mốc <span class="math frac frac-sm"><span class="top">k.n</span><span>4</span></span></h3>
-                <p style="margin-bottom:15px; color: var(--secondary-color);">Thay đổi tham số để xem vị trí tích lũy:</p>
-                
-                <div class="interactive-box">
-                    <label>Cỡ mẫu (n): <input type="number" id="input-n" value="40" min="4" max="1000" style="width: 70px;"></label>
-                    <br><br>
-                    <label>Chọn Tứ phân vị: 
-                        <select id="select-k">
-                            <option value="1">Q1 (k=1)</option>
-                            <option value="2">Q2 (k=2) - Trung vị</option>
-                            <option value="3">Q3 (k=3)</option>
-                        </select>
-                    </label>
-                    <br><br>
-                    <button class="btn btn-action" style="margin: 0 auto; padding: 8px 25px;" onclick="calculateKn4()">Tính Vị Trí</button>
+        <!-- Right Panel: Calculator Simulation -->
+        <div class="panel">
+            <h2>Mô Phỏng Thao Tác Bấm Máy</h2>
+            <div id="sim-title" style="text-align:center; margin-bottom: 15px; font-weight:bold; color:var(--accent-color);">
+                Chuẩn bị tính Q1...
+            </div>
+            
+            <div class="calculator-container">
+                <div class="calc-screen">
+                    <div class="calc-expression" id="screen-expr"></div>
+                    <div class="calc-result" id="screen-res"></div>
                 </div>
 
-                <div id="result-display">
+                <div class="calc-keys">
+                    <!-- Row 1 -->
+                    <button class="calc-btn hl-func" id="btn-AC">AC</button>
+                    <button class="calc-btn hl-func" id="btn-DEL">DEL</button>
+                    <button class="calc-btn hl-func" id="btn-(">(</button>
+                    <button class="calc-btn hl-func" id="btn-)">)</button>
+                    
+                    <!-- Row 2 -->
+                    <button class="calc-btn" id="btn-7">7</button>
+                    <button class="calc-btn" id="btn-8">8</button>
+                    <button class="calc-btn" id="btn-9">9</button>
+                    <button class="calc-btn hl-op" id="btn-÷">÷</button>
+                    
+                    <!-- Row 3 -->
+                    <button class="calc-btn" id="btn-4">4</button>
+                    <button class="calc-btn" id="btn-5">5</button>
+                    <button class="calc-btn" id="btn-6">6</button>
+                    <button class="calc-btn hl-op" id="btn-×">×</button>
+                    
+                    <!-- Row 4 -->
+                    <button class="calc-btn" id="btn-1">1</button>
+                    <button class="calc-btn" id="btn-2">2</button>
+                    <button class="calc-btn" id="btn-3">3</button>
+                    <button class="calc-btn hl-op" id="btn--">-</button>
+                    
+                    <!-- Row 5 -->
+                    <button class="calc-btn" id="btn-0">0</button>
+                    <button class="calc-btn" id="btn-.">.</button>
+                    <button class="calc-btn hl-eq" id="btn-=">=</button>
+                    <button class="calc-btn hl-op" id="btn-+">+</button>
                 </div>
+            </div>
+
+            <div class="sim-instruction" id="instruction">Bấm "Tiếp" để bắt đầu thao tác tính Q1</div>
+            
+            <div class="sim-controls">
+                <button class="btn-action" onclick="resetSim()" style="background: linear-gradient(145deg, #444, #222);">Làm lại từ đầu</button>
+                <button class="btn-action" onclick="nextStep()" id="btn-next" style="padding: 10px 40px; font-size: 18px;">Tiếp ➔</button>
             </div>
         </div>
     </div>
 </div>
 
-<div class="watermark">
+<div class="footer-watermark">
     Tác giả: Vũ Trung Thành - Tổ Toán-Tin, THPT Bình Giang, Zalo: 0979791802
 </div>
 
 <script>
-    function toggleTheme() {
-        const body = document.body;
-        const btn = document.getElementById("btn-theme");
-        if (body.getAttribute("data-theme") === "realistic") {
-            body.setAttribute("data-theme", "textbook");
-            btn.innerHTML = "🔄 Đổi Giao Diện: Sách Giáo Khoa";
-        } else {
-            body.setAttribute("data-theme", "realistic");
-            btn.innerHTML = "🔄 Đổi Giao Diện: Chân Thực";
+    // --- Logic Giả Lập Bấm Máy Tính ---
+    
+    // Định nghĩa các chuỗi bấm phím cho Q1, Q2, Q3
+    const sequences = [
+        {
+            title: "Tính Tứ phân vị thứ nhất (Q1)",
+            steps: ["1","5","+","(","1","0","-","4",")","÷","1","0","×","1","5","="],
+            result: "24"
+        },
+        {
+            title: "Tính Trung vị (Q2)",
+            steps: ["3","0","+","(","2","0","-","1","4",")","÷","1","2","×","1","5","="],
+            result: "37.5"
+        },
+        {
+            title: "Tính Tứ phân vị thứ ba (Q3)",
+            steps: ["4","5","+","(","3","0","-","2","6",")","÷","1","0","×","1","5","="],
+            result: "51"
+        }
+    ];
+
+    let currentSeq = 0;
+    let currentStep = 0;
+    let currentExpression = "";
+    
+    const elExpr = document.getElementById("screen-expr");
+    const elRes = document.getElementById("screen-res");
+    const elTitle = document.getElementById("sim-title");
+    const elInst = document.getElementById("instruction");
+    const btnNext = document.getElementById("btn-next");
+
+    function updateUI() {
+        if(currentSeq >= sequences.length) {
+            elTitle.innerText = "Đã hoàn thành!";
+            elInst.innerText = "Bạn đã thực hiện xong các bước bấm máy.";
+            btnNext.disabled = true;
+            btnNext.style.opacity = 0.5;
+            return;
+        }
+        
+        elTitle.innerText = sequences[currentSeq].title;
+        btnNext.disabled = false;
+        btnNext.style.opacity = 1;
+    }
+
+    function animateButton(btnId) {
+        const btn = document.getElementById("btn-" + btnId);
+        if(btn) {
+            btn.classList.add("active");
+            setTimeout(() => {
+                btn.classList.remove("active");
+            }, 300);
         }
     }
 
+    function nextStep() {
+        if (currentSeq >= sequences.length) return;
+
+        const seq = sequences[currentSeq];
+        
+        if (currentStep === 0 && currentExpression === "") {
+            // First step, clear screen
+            elExpr.innerText = "";
+            elRes.innerText = "";
+        }
+
+        if (currentStep < seq.steps.length) {
+            let key = seq.steps[currentStep];
+            animateButton(key);
+            
+            if (key !== "=") {
+                currentExpression += key;
+                elExpr.innerText = currentExpression;
+                elInst.innerText = `Máy tự động bấm phím: [ ${key} ]`;
+            } else {
+                elRes.innerText = seq.result;
+                elInst.innerText = `Bấm phím [ = ] ra kết quả: ${seq.result}`;
+            }
+            
+            currentStep++;
+            
+            if (currentStep === seq.steps.length) {
+                btnNext.innerHTML = "Tính Giá Trị Tiếp Theo ➔";
+                btnNext.style.background = "linear-gradient(145deg, #238636, #134e1d)";
+                btnNext.style.boxShadow = "0 4px #0d3815, 0 5px 15px rgba(0,0,0,0.4)";
+            } else {
+                btnNext.innerHTML = "Tiếp ➔";
+                btnNext.style.background = "linear-gradient(145deg, #1f6feb, #1158c7)";
+                btnNext.style.boxShadow = "0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4)";
+            }
+        } else {
+            // Move to next sequence
+            currentSeq++;
+            currentStep = 0;
+            currentExpression = "";
+            animateButton("AC");
+            elExpr.innerText = "";
+            elRes.innerText = "";
+            updateUI();
+            
+            if (currentSeq < sequences.length) {
+                elInst.innerText = `Đã xóa màn hình. Bấm "Tiếp" để bắt đầu tính Q${currentSeq + 1}`;
+                btnNext.innerHTML = "Bắt đầu ➔";
+                btnNext.style.background = "linear-gradient(145deg, #1f6feb, #1158c7)";
+                btnNext.style.boxShadow = "0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4)";
+            }
+        }
+    }
+
+    function resetSim() {
+        currentSeq = 0;
+        currentStep = 0;
+        currentExpression = "";
+        elExpr.innerText = "";
+        elRes.innerText = "";
+        animateButton("AC");
+        elInst.innerText = `Bấm "Tiếp" để bắt đầu thao tác tính Q1`;
+        btnNext.innerHTML = "Tiếp ➔";
+        btnNext.style.background = "linear-gradient(145deg, #1f6feb, #1158c7)";
+        btnNext.style.boxShadow = "0 4px #0d419d, 0 5px 15px rgba(0,0,0,0.4)";
+        updateUI();
+    }
+
+    // --- Các hàm hệ thống trình duyệt ---
     function toggleFullScreen() {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(err => {
@@ -448,39 +543,17 @@
         }
     }
 
-    function closeBrowser() {
-        if (confirm("Bạn có chắc chắn muốn thoát khỏi trang mô phỏng?")) {
+    function closeWindow() {
+        if (confirm("Bạn có chắc chắn muốn thoát mô phỏng?")) {
+            // Lệnh này có thể bị chặn bởi trình duyệt nếu tab không được mở bằng script
             window.close();
-            document.body.innerHTML = `
-                <div style="display:flex; height:100vh; width:100vw; justify-content:center; align-items:center; flex-direction:column; background:var(--bg-color);">
-                    <h1 style="color:var(--primary-color);">Đã Thoát Mô Phỏng</h1>
-                    <p style="font-size:1.1rem; color:var(--text-color);">Vui lòng đóng tab này trên trình duyệt của bạn.</p>
-                </div>`;
+            // Fallback nếu window.close() bị chặn:
+            document.body.innerHTML = "<h1 style='text-align:center; margin-top:20%; color:var(--text-color);'>ĐÃ THOÁT MÔ PHỎNG. VUI LÒNG ĐÓNG TAB!</h1>";
         }
     }
 
-    function calculateKn4() {
-        const n = parseInt(document.getElementById('input-n').value);
-        const k = parseInt(document.getElementById('select-k').value);
-        
-        if(isNaN(n) || n <= 0) {
-            document.getElementById('result-display').innerHTML = "<span style='color:var(--accent-color);'>Vui lòng nhập cỡ mẫu n hợp lệ!</span>";
-            return;
-        }
-
-        const result = (k * n) / 4;
-        const resDiv = document.getElementById('result-display');
-        
-        resDiv.style.opacity = 0;
-        setTimeout(() => {
-            resDiv.innerHTML = `Giá trị <span class="math frac frac-sm"><span class="top">${k} &times; ${n}</span><span>4</span></span> = <b>${result}</b><br>
-            <span style="font-size:0.95rem; font-weight:normal; color:var(--text-color); display:block; margin-top:8px;">
-                ➔ Tìm F<sub>max</sub> là số lớn nhất trong cột tích lũy nhưng <b>≤ ${result}</b>
-            </span>`;
-            resDiv.style.transition = "opacity 0.4s ease";
-            resDiv.style.opacity = 1;
-        }, 100);
-    }
+    // Init
+    updateUI();
 </script>
 </body>
 </html>
