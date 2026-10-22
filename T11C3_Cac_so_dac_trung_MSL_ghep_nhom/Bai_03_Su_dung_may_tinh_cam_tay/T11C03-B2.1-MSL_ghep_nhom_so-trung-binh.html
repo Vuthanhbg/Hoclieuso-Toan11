@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Thống Kê - Tính Số Trung Bình Mẫu Ghép Nhóm</title>
+    
+    <!-- Tích hợp MathJax để hiển thị công thức Toán học sắc nét -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --panel-bg: #1e1e1e;
+            --accent-color: #00e5ff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--panel-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            font-size: 1.6rem;
+            text-transform: uppercase;
+        }
+
+        /* --- Vùng Điều khiển --- */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #282828;
+            padding: 15px;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #00b4d8, #0077b6);
+            color: white;
+            box-shadow: 3px 3px 6px #111, -2px -2px 5px #333;
+            transition: all 0.2s ease;
+        }
+
+        button:active { transform: translateY(2px) scale(0.98); }
+        button:hover { filter: brightness(1.2); }
+
+        .btn-fullscreen { background: linear-gradient(145deg, #ff9800, #e65100); }
+        .btn-exit {
+            background: linear-gradient(145deg, #f44336, #c62828);
+            display: block;
+            margin: 40px auto 10px auto;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            min-width: 200px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        /* --- Canvas Mô phỏng --- */
+        .simulation {
+            width: 100%;
+            height: 480px; 
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #555;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* --- Định dạng Nội dung --- */
+        .content { font-size: 1.15rem; color: #ececec; }
+        .content h2, .content h3 { color: #ffca28; margin: 20px 0 10px 0; }
+        .content p, .content ul { margin-bottom: 12px; }
+        .content ul { padding-left: 25px; }
+
+        /* Bảng dữ liệu */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background-color: #2a2a2a;
+            text-align: center;
+        }
+        table.data-table th, table.data-table td { border: 1px solid #555; padding: 12px; }
+        table.data-table th { background-color: #333; color: var(--accent-color); }
+
+        /* --- CSS Phím bấm 3D Nổi bật --- */
+        kbd.key-3d {
+            display: inline-block;
+            margin: 0 4px;
+            padding: 4px 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #ffffff; /* Chữ tương phản */
+            background: linear-gradient(180deg, #d32f2f 0%, #b71c1c 100%); /* Nền đỏ nổi bật */
+            border: 1px solid #7f0000;
+            border-radius: 6px;
+            box-shadow: 0 4px 0 #7f0000, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+            transform: translateY(-2px);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            user-select: none;
+        }
+        
+        /* Phím số, ký tự dùng màu xanh lục để phân biệt */
+        kbd.key-num {
+            background: linear-gradient(180deg, #388e3c 0%, #1b5e20 100%);
+            border-color: #003300;
+            box-shadow: 0 4px 0 #003300, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* --- Gợi ý sư phạm --- */
+        .pedagogy {
+            background: rgba(0, 229, 255, 0.05);
+            border-left: 4px solid var(--accent-color);
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 4px;
+        }
+        .pedagogy h3 { color: var(--accent-color); margin-bottom: 10px; }
+        .pedagogy ol { padding-left: 25px; font-size: 1.1rem; }
+
+        /* --- Watermark in chìm --- */
+        .watermark {
+            text-align: center;
+            opacity: 0.15;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffffff;
+            padding: 20px 0;
+            pointer-events: none;
+            user-select: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .simulation { height: 350px; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="mainWrapper">
+    <header>
+        <h1>Mô phỏng Thống Kê: Tính Số Trung Bình Mẫu Số Liệu Ghép Nhóm</h1>
+        <button class="btn-fullscreen" onclick="toggleFullScreen()">⛶ Toàn Màn Hình</button>
+    </header>
+
+    <main>
+        <section class="controls" aria-label="Điều khiển">
+            <button id="styleToggle">Đổi sang Sách giáo khoa</button>
+            <button id="playPause">▶ Khởi chạy Tính toán</button>
+            <button id="reset">↺ Đặt lại</button>
+            <div style="flex-grow: 1; display: flex; align-items: center; gap: 15px; font-weight: bold;">
+                <span id="progressText">Tiến trình (0/6):</span>
+                <input type="range" id="timeSlider" min="0" max="6" value="0">
+            </div>
+        </section>
+
+        <!-- Canvas hiển thị 4K/Retina -->
+        <section class="simulation" aria-label="Mô phỏng">
+            <canvas id="simCanvas"></canvas>
+        </section>
+
+        <section class="content">
+            <p><strong>Luyện tập 1.</strong> Tìm hiểu thời gian xem ti vi trong tuần trước (đơn vị: giờ) của một số học sinh thu được kết quả sau:</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Thời gian (giờ)</th>
+                        <th>[0; 5)</th>
+                        <th>[5; 10)</th>
+                        <th>[10; 15)</th>
+                        <th>[15; 20)</th>
+                        <th>[20; 25)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Số học sinh</strong></td>
+                        <td>8</td>
+                        <td>16</td>
+                        <td>4</td>
+                        <td>2</td>
+                        <td>2</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <p><strong>Tính thời gian xem ti vi trung bình trong tuần trước của các bạn học sinh này.</strong></p>
+
+            <hr style="border:1px solid #444; margin: 20px 0;">
+
+            <h2>Phân tích toán học trước khi bấm máy:</h2>
+            <p>Để tính số trung bình của mẫu số liệu ghép nhóm, ta cần tìm giá trị đại diện (\(x\)) cho từng nhóm (bằng trung bình cộng của 2 đầu mút) và xác định tần số (\(n\)).</p>
+            <ul>
+                <li>Nhóm [0; 5): \(x_1 = 2.5\), \(n_1 = 8\)</li>
+                <li>Nhóm [5; 10): \(x_2 = 7.5\), \(n_2 = 16\)</li>
+                <li>Nhóm [10; 15): \(x_3 = 12.5\), \(n_3 = 4\)</li>
+                <li>Nhóm [15; 20): \(x_4 = 17.5\), \(n_4 = 2\)</li>
+                <li>Nhóm [20; 25): \(x_5 = 22.5\), \(n_5 = 2\)</li>
+            </ul>
+            <p>Tổng số học sinh \(N = 8 + 16 + 4 + 2 + 2 = 32\).</p>
+            <p>Công thức: \(\bar{x} = \frac{2.5 \times 8 + 7.5 \times 16 + 12.5 \times 4 + 17.5 \times 2 + 22.5 \times 2}{32} = \frac{270}{32} = 8.4375\).</p>
+
+            <hr style="border:1px solid #444; margin: 20px 0;">
+
+            <h2>Dưới đây là quy trình bấm máy thống kê 1 biến có tần số để ra kết quả nhanh chóng.</h2>
+
+            <h3>1. Nhóm máy Casio fx-580VN X và Vinacal 680EX Plus</h3>
+            <ul>
+                <li><strong>Bước 1: Bật cột Tần số (Freq)</strong>
+                    <ul>
+                        <li>Nhấn <kbd class="key-3d">SHIFT</kbd> \(\rightarrow\) <kbd class="key-3d">MENU</kbd> (Setup).</li>
+                        <li>Nhấn mũi tên <kbd class="key-3d">↓</kbd> xuống, chọn <kbd class="key-3d key-num">3</kbd> (Statistics / Thống kê).</li>
+                        <li>Chọn <kbd class="key-3d key-num">1</kbd> (On / Bật) để hiển thị cột Tần số.</li>
+                    </ul>
+                </li>
+                <li><strong>Bước 2: Vào chế độ Thống kê và nhập liệu</strong>
+                    <ul>
+                        <li>Nhấn <kbd class="key-3d">MENU</kbd> \(\rightarrow\) <kbd class="key-3d key-num">6</kbd> (Statistics).</li>
+                        <li>Nhấn <kbd class="key-3d key-num">1</kbd> (1-Variable).</li>
+                        <li>Nhập cột x (giá trị đại diện): <kbd class="key-3d key-num">2.5</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">7.5</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">12.5</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">17.5</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">22.5</kbd> <kbd class="key-3d key-num">=</kbd>.</li>
+                        <li>Bấm mũi tên sang phải và lùi lên trên cùng để nhập cột tần số tương ứng: <kbd class="key-3d key-num">8</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">16</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">4</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">2</kbd> <kbd class="key-3d key-num">=</kbd> <kbd class="key-3d key-num">2</kbd> <kbd class="key-3d key-num">=</kbd>.</li>
+                    </ul>
+                </li>
+                <li><strong>Bước 3: Đọc kết quả trung bình</strong>
+                    <ul>
+                        <li>Nhấn phím <kbd class="key-3d">OPTN</kbd>, chọn <kbd class="key-3d key-num">3</kbd> (1-Variable Calc).</li>
+                        <li>Máy sẽ hiển thị kết quả số trung bình ở dòng đầu tiên: \(\bar{x} = 8.4375\).</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>2. Nhóm máy Casio fx-880BTG</h3>
+            <ul>
+                <li><strong>Bước 1: Bật cột Tần số</strong>
+                    <ul>
+                        <li>Nhấn <kbd class="key-3d">HOME</kbd>, chọn ứng dụng Statistics \(\rightarrow\) <kbd class="key-3d">OK</kbd>.</li>
+                        <li>Chọn 1-Variable \(\rightarrow\) <kbd class="key-3d">OK</kbd>.</li>
+                        <li>Nhấn <kbd class="key-3d">TOOLS</kbd>, chọn Frequency (Tần số) \(\rightarrow\) chọn On (Bật).</li>
+                    </ul>
+                </li>
+                <li><strong>Bước 2: Nhập số liệu</strong>
+                    <ul>
+                        <li>Lần lượt nhập các giá trị đại diện vào cột x và tần số vào cột Freq như bảng trên.</li>
+                    </ul>
+                </li>
+                <li><strong>Bước 3: Đọc kết quả</strong>
+                    <ul>
+                        <li>Sau khi nhập xong, nhấn <kbd class="key-3d">EXE</kbd> (hoặc <kbd class="key-3d">OK</kbd>).</li>
+                        <li>Chọn 1-Var Results.</li>
+                        <li>Đọc kết quả ở dòng đầu tiên: \(\bar{x} = 8.4375\).</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>3. Nhóm máy Casio fx-570VN Plus, 570ES Plus, Vinacal 570ES Plus II và Vinaplus FX</h3>
+            <ul>
+                <li><strong>Bước 1: Bật cột Tần số (Freq)</strong>
+                    <ul>
+                        <li>Nhấn <kbd class="key-3d">SHIFT</kbd> \(\rightarrow\) <kbd class="key-3d">MODE</kbd> (Setup).</li>
+                        <li>Bấm mũi tên <kbd class="key-3d">↓</kbd> xuống, chọn <kbd class="key-3d key-num">4</kbd> (STAT).</li>
+                        <li>Nhấn <kbd class="key-3d key-num">1</kbd> (ON) để bật cột tần số.</li>
+                    </ul>
+                </li>
+                <li><strong>Bước 2: Vào chế độ Thống kê</strong>
+                    <ul>
+                        <li>Nhấn <kbd class="key-3d">MODE</kbd> \(\rightarrow\) chọn <kbd class="key-3d key-num">3</kbd> (STAT).</li>
+                        <li>Nhấn <kbd class="key-3d key-num">1</kbd> (1-VAR).</li>
+                    </ul>
+                </li>
+                <li><strong>Bước 3: Nhập liệu và Tính toán</strong>
+                    <ul>
+                        <li>Nhập 5 giá trị đại diện vào cột X và 5 giá trị tần số vào cột FREQ.</li>
+                        <li>Bắt buộc nhấn phím <kbd class="key-3d">AC</kbd> để lưu bảng và thoát ra màn hình trắng.</li>
+                        <li>Nhấn <kbd class="key-3d">SHIFT</kbd> \(\rightarrow\) <kbd class="key-3d key-num">1</kbd> (STAT) \(\rightarrow\) chọn <kbd class="key-3d key-num">4</kbd> (Var).</li>
+                        <li>Nhấn <kbd class="key-3d key-num">2</kbd> (\(\bar{x}\)) \(\rightarrow\) nhấn <kbd class="key-3d key-num">=</kbd>.</li>
+                        <li>Máy sẽ trả về kết quả thời gian xem tivi trung bình là \(8.4375\) (giờ).</li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+
+        <section class="pedagogy" aria-label="Gợi ý sư phạm">
+            <h3>💡 Góc tư duy & Tương tác trên lớp</h3>
+            <ol>
+                <li>Tại sao chúng ta phải lấy giá trị đại diện (trung bình cộng 2 đầu mút) thay vì lấy toàn bộ các số trong khoảng?</li>
+                <li>Dựa vào biểu đồ, khoảng thời gian xem TV nào có nhiều học sinh nhất (Mode)? Điều này có gần với giá trị trung bình vừa tính không?</li>
+                <li>Việc quên "Bật cột Tần số" (Freq = ON) trên máy tính sẽ dẫn đến sai lầm nguy hiểm nào trong kết quả?</li>
+            </ol>
+        </section>
+
+        <button class="btn-exit" onclick="closeApp()">⏻ Thoát và đóng trình duyệt</button>
+
+        <div class="watermark">
+            Tác giả: Vũ Trung Thành - Tổ Toán-Tin, THPT Bình Giang, Zalo: 0979791802
+        </div>
+    </main>
+</div>
+
+<script>
+    // --- DỮ LIỆU BÀI TOÁN ---
+    const binsData = [
+        { label: "[0; 5)", min: 0, max: 5, mid: 2.5, freq: 8 },
+        { label: "[5; 10)", min: 5, max: 10, mid: 7.5, freq: 16 },
+        { label: "[10; 15)", min: 10, max: 15, mid: 12.5, freq: 4 },
+        { label: "[15; 20)", min: 15, max: 20, mid: 17.5, freq: 2 },
+        { label: "[20; 25)", min: 20, max: 25, mid: 22.5, freq: 2 }
+    ];
+    const totalN = 32;
+    const finalMean = 8.4375;
+
+    let currentStyle = 'realistic'; 
+    let isPlaying = false;
+    let stepIndex = 0; // 0 -> 5 (tính từng nhóm), 6 (tính mean)
+    let lastTime = 0;
+    let animationReq;
+
+    // --- CẤU HÌNH ĐỘ NÉT CAO CANVAS (RETINA/4K) ---
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    function scaleCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+        
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        
+        ctx.scale(dpr, dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        
+        draw();
+    }
+    window.addEventListener('resize', scaleCanvas);
+
+    // --- ĐIỀU KHIỂN SỰ KIỆN ---
+    const styleToggle = document.getElementById('styleToggle');
+    const playPause = document.getElementById('playPause');
+    const resetBtn = document.getElementById('reset');
+    const timeSlider = document.getElementById('timeSlider');
+    const progressText = document.getElementById('progressText');
+
+    styleToggle.addEventListener('click', () => {
+        currentStyle = currentStyle === 'realistic' ? 'textbook' : 'realistic';
+        styleToggle.textContent = currentStyle === 'realistic' ? 'Đổi sang Sách giáo khoa' : 'Đổi sang Chân thực';
+        draw();
+    });
+
+    playPause.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        playPause.textContent = isPlaying ? '⏸ Tạm dừng' : '▶ Khởi chạy Tính toán';
+        if (isPlaying && stepIndex >= 6) resetAll();
+        if (isPlaying) requestAnimationFrame(loop);
+    });
+
+    resetBtn.addEventListener('click', resetAll);
+
+    timeSlider.addEventListener('input', (e) => {
+        stepIndex = parseInt(e.target.value);
+        progressText.textContent = `Tiến trình (${stepIndex}/6):`;
+        draw();
+    });
+
+    function resetAll() {
+        isPlaying = false;
+        playPause.textContent = '▶ Khởi chạy Tính toán';
+        stepIndex = 0;
+        timeSlider.value = 0;
+        progressText.textContent = `Tiến trình (0/6):`;
+        draw();
+    }
+
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        if (timestamp - lastTime > 1200) { // Tốc độ chạy 1.2s mỗi bước cho giáo viên dễ giảng giải
+            if (stepIndex < 6) {
+                stepIndex++;
+                timeSlider.value = stepIndex;
+                progressText.textContent = `Tiến trình (${stepIndex}/6):`;
+                lastTime = timestamp;
+                draw();
+            } else {
+                isPlaying = false;
+                playPause.textContent = '▶ Khởi chạy Tính toán';
+                return;
+            }
+        }
+        if (isPlaying) animationReq = requestAnimationFrame(loop);
+    }
+
+    // --- HÀM VẼ (2 CHẾ ĐỘ) ---
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+        if (currentStyle === 'realistic') drawRealistic();
+        else drawTextbook();
+    }
+
+    // Chế độ 1: Chân thực (Màu tối, Gradient neon nổi bật)
+    function drawRealistic() {
+        // Nền tối
+        const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+        bgGradient.addColorStop(0, '#0f172a');
+        bgGradient.addColorStop(1, '#020617');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, width, height);
+
+        const padX = 70, padY = 80;
+        const chartW = width - padX * 2;
+        const chartH = height - padY * 2;
+        const barW = chartW / binsData.length;
+        const maxFreq = 20;
+
+        // Vẽ lưới
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        for(let i = 0; i <= maxFreq; i+=4) {
+            let y = height - padY - (i/maxFreq)*chartH;
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(width - padX, y); ctx.stroke();
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(i, padX - 10, y + 5);
+        }
+
+        // Thông tin công thức chạy động
+        let currentSum = 0;
+        let currentN = 0;
+
+        // Vẽ cột (tuỳ theo stepIndex)
+        ctx.textAlign = 'center';
+        for (let i = 0; i < binsData.length; i++) {
+            const hBar = (binsData[i].freq / maxFreq) * chartH;
+            const x = padX + i * barW;
+            const y = height - padY - hBar;
+
+            // Nếu nằm trong tiến trình đã chạy
+            if(i < stepIndex) {
+                currentSum += binsData[i].mid * binsData[i].freq;
+                currentN += binsData[i].freq;
+
+                // Đổ bóng Neon
+                ctx.shadowColor = '#00e5ff';
+                ctx.shadowBlur = 20;
+                
+                const barGrad = ctx.createLinearGradient(0, y, 0, height - padY);
+                barGrad.addColorStop(0, '#00e5ff');
+                barGrad.addColorStop(1, '#0284c7');
+                
+                ctx.fillStyle = barGrad;
+                ctx.beginPath();
+                ctx.roundRect(x + 10, y, barW - 20, hBar, [5, 5, 0, 0]);
+                ctx.fill();
+                ctx.shadowBlur = 0; 
+                
+                ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Số liệu
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px Arial';
+                ctx.fillText(`n=${binsData[i].freq}`, x + barW/2, y - 10);
+                
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 16px Courier New';
+                ctx.fillText(`x=${binsData[i].mid}`, x + barW/2, y + 25);
+            } else {
+                // Cột mờ chưa tới
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                ctx.fillRect(x + 10, y, barW - 20, hBar);
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.strokeRect(x + 10, y, barW - 20, hBar);
+            }
+
+            // Nhãn dưới trục X
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 14px "Courier New"';
+            ctx.fillText(binsData[i].label, x + barW/2, height - padY + 25);
+        }
+
+        // Bảng thông số tính toán (HUD)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.roundRect(padX + 20, 20, 350, 50, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#00e5ff';
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'left';
+        ctx.font = '16px Arial';
+        ctx.fillText(`Tổng Σ(x×n): ${currentSum}`, padX + 40, 42);
+        ctx.fillText(`Σn: ${currentN}`, padX + 220, 42);
+        ctx.fillText(`x̄ = ?`, padX + 300, 42);
+
+        // Vẽ vạch kết quả Trung bình (Step 6)
+        if (stepIndex === 6) {
+            const meanX = padX + (finalMean / 25) * chartW;
+            
+            ctx.beginPath();
+            ctx.moveTo(meanX, padY);
+            ctx.lineTo(meanX, height - padY);
+            ctx.strokeStyle = '#f43f5e'; // Đỏ neon
+            ctx.lineWidth = 4;
+            ctx.setLineDash([10, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Nhãn Mean
+            ctx.fillStyle = '#f43f5e';
+            ctx.shadowColor = '#f43f5e'; ctx.shadowBlur = 10;
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`x̄ = 8.4375`, meanX, padY - 15);
+            ctx.shadowBlur = 0;
+
+            // Update HUD
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillRect(padX + 295, 25, 60, 25);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText(`8.44`, padX + 300, 43);
+        }
+    }
+
+    // Chế độ 2: Sách giáo khoa (Nền sáng, đường nét rõ, chuẩn mực)
+    function drawTextbook() {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        
+        const padX = 70, padY = 80;
+        const chartW = width - padX * 2;
+        const chartH = height - padY * 2;
+        const barW = chartW / binsData.length;
+        const maxFreq = 20;
+        
+        // Trục tọa độ 
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        
+        // Trục Y
+        ctx.beginPath(); ctx.moveTo(padX, padY - 20); ctx.lineTo(padX, height - padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padX - 6, padY - 10); ctx.lineTo(padX, padY - 25); ctx.lineTo(padX + 6, padY - 10); ctx.fillStyle = '#000'; ctx.fill();
+
+        // Trục X
+        ctx.beginPath(); ctx.moveTo(padX, height - padY); ctx.lineTo(width - padX + 20, height - padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(width - padX + 10, height - padY - 6); ctx.lineTo(width - padX + 25, height - padY); ctx.lineTo(width - padX + 10, height - padY + 6); ctx.fill();
+
+        // Lưới trục Y
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '15px Times New Roman';
+        for(let i = 0; i <= maxFreq; i+=4) {
+            let y = height - padY - (i/maxFreq)*chartH;
+            ctx.beginPath(); ctx.moveTo(padX - 5, y); ctx.lineTo(padX, y); ctx.stroke();
+            
+            ctx.save();
+            ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(width - padX, y); ctx.stroke();
+            ctx.restore();
+
+            ctx.fillText(i, padX - 10, y);
+        }
+
+        ctx.fillText("Học sinh", padX + 60, padY - 25);
+        ctx.fillText("Thời gian (h)", width - padX + 20, height - padY + 30);
+
+        let currentSum = 0;
+        let currentN = 0;
+        let formulaText = "x̄ = (";
+
+        // Vẽ biểu đồ
+        ctx.textAlign = 'center';
+        for (let i = 0; i < binsData.length; i++) {
+            const hBar = (binsData[i].freq / maxFreq) * chartH;
+            const x = padX + i * barW;
+            const y = height - padY - hBar;
+
+            if (i < stepIndex) {
+                currentSum += binsData[i].mid * binsData[i].freq;
+                currentN += binsData[i].freq;
+                if(i > 0) formulaText += " + ";
+                formulaText += `${binsData[i].mid}×${binsData[i].freq}`;
+
+                ctx.fillStyle = '#bbdefb';
+                ctx.fillRect(x + 10, y, barW - 20, hBar);
+                ctx.strokeStyle = '#1565c0';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + 10, y, barW - 20, hBar);
+
+                ctx.fillStyle = '#b71c1c';
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(binsData[i].freq, x + barW/2, y - 12);
+                
+                ctx.fillStyle = '#000';
+                ctx.font = '14px Times New Roman';
+                ctx.fillText(`x=${binsData[i].mid}`, x + barW/2, y + 20);
+            }
+
+            ctx.fillStyle = '#000000';
+            ctx.font = '15px Times New Roman';
+            ctx.fillText(binsData[i].label, x + barW/2, height - padY + 20);
+        }
+
+        formulaText += `) / ${currentN > 0 ? currentN : 'N'}`;
+
+        // Hiển thị công thức đang ráp
+        ctx.fillStyle = '#000';
+        ctx.font = 'italic 18px Times New Roman';
+        ctx.textAlign = 'left';
+        ctx.fillText(stepIndex > 0 ? formulaText : 'Đang chờ tính toán...', padX + 20, 40);
+
+        // Vẽ kết quả
+        if (stepIndex === 6) {
+            const meanX = padX + (finalMean / 25) * chartW;
+            
+            ctx.beginPath();
+            ctx.moveTo(meanX, padY);
+            ctx.lineTo(meanX, height - padY);
+            ctx.strokeStyle = '#d32f2f';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#d32f2f';
+            ctx.font = 'bold 18px Times New Roman';
+            ctx.textAlign = 'center';
+            ctx.fillText(`x̄ ≈ 8.44`, meanX, padY - 15);
+
+            ctx.textAlign = 'left';
+            ctx.fillText(`= 8.4375`, padX + 20, 70);
+        }
+    }
+
+    // --- TIỆN ÍCH HỖ TRỢ ---
+    function toggleFullScreen() {
+        const wrap = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (wrap.requestFullscreen) wrap.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
+    function closeApp() {
+        if (confirm("Thầy có chắc chắn muốn thoát mô phỏng và đóng tab này không?")) {
+            window.close();
+            document.body.innerHTML = "<h2 style='text-align:center; margin-top:20vh; color:var(--accent-color);'>Mô phỏng đã được đóng. Thầy có thể tắt tab trình duyệt này.</h2>";
+        }
+    }
+
+    window.onload = () => {
+        scaleCanvas();
+        resetAll();
+    };
+</script>
+
+</body>
+</html>
