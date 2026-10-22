@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Thống Kê - Tính Tứ Phân Vị Mẫu Số Liệu Ghép Nhóm</title>
+    
+    <!-- Tích hợp MathJax để hiển thị công thức Toán học sắc nét -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: #1e293b;
+            --accent-color: #38bdf8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--panel-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            font-size: 1.5rem;
+            text-transform: uppercase;
+        }
+
+        /* --- Vùng Điều khiển --- */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            align-items: center;
+            border: 1px solid #334155;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #0284c7, #0369a1);
+            color: white;
+            box-shadow: 3px 3px 6px #070f19, -2px -2px 5px #172335;
+            transition: all 0.2s ease;
+        }
+
+        button:active { transform: translateY(2px) scale(0.98); }
+        button:hover { filter: brightness(1.2); }
+
+        .btn-fullscreen { background: linear-gradient(145deg, #d97706, #b45309); }
+        .btn-exit {
+            background: linear-gradient(145deg, #e11d48, #be123c);
+            display: block;
+            margin: 40px auto 10px auto;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            min-width: 200px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        /* --- Canvas Mô phỏng 4K --- */
+        .simulation {
+            width: 100%;
+            height: 480px; 
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #475569;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* --- Định dạng Nội dung --- */
+        .content { font-size: 1.15rem; color: #e2e8f0; }
+        .content h2, .content h3 { color: #fbbf24; margin: 20px 0 10px 0; }
+        .content p, .content ul { margin-bottom: 12px; }
+        .content ul { padding-left: 25px; }
+
+        /* Bảng dữ liệu */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background-color: #0f172a;
+            text-align: center;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        table.data-table th, table.data-table td { border: 1px solid #334155; padding: 12px; }
+        table.data-table th { background-color: #1e293b; color: var(--accent-color); }
+
+        /* --- CSS Phím bấm 3D Nổi bật --- */
+        kbd.key-3d {
+            display: inline-block;
+            margin: 0 4px;
+            padding: 4px 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #ffffff; /* Chữ tương phản */
+            border-radius: 6px;
+            transform: translateY(-2px);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            user-select: none;
+        }
+        
+        /* Phím Chức năng (Đỏ nổi bật) */
+        kbd.key-func {
+            background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+            border: 1px solid #7f1d1d;
+            box-shadow: 0 4px 0 #7f1d1d, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* Phím Số (Xanh dương) */
+        kbd.key-num {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            border: 1px solid #1e3a8a;
+            box-shadow: 0 4px 0 #1e3a8a, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* Phím Điều hướng / Dấu (Xanh lá) */
+        kbd.key-nav {
+            background: linear-gradient(180deg, #10b981 0%, #047857 100%);
+            border: 1px solid #064e3b;
+            box-shadow: 0 4px 0 #064e3b, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* --- Gợi ý sư phạm --- */
+        .pedagogy {
+            background: rgba(56, 189, 248, 0.05);
+            border-left: 4px solid var(--accent-color);
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 4px;
+        }
+        .pedagogy h3 { color: var(--accent-color); margin-bottom: 10px; }
+        .pedagogy ol { padding-left: 25px; font-size: 1.1rem; }
+
+        /* --- Watermark in chìm --- */
+        .watermark {
+            text-align: center;
+            opacity: 0.15;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffffff;
+            padding: 20px 0;
+            pointer-events: none;
+            user-select: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .simulation { height: 350px; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="mainWrapper">
+    <header>
+        <h1>Mô phỏng: Tính Tứ Phân Vị Mẫu Số Liệu Ghép Nhóm</h1>
+        <button class="btn-fullscreen" onclick="toggleFullScreen()">⛶ Toàn Màn Hình</button>
+    </header>
+
+    <main>
+        <section class="controls" aria-label="Điều khiển">
+            <button id="styleToggle">Đổi sang Sách giáo khoa</button>
+            <button id="playPause">▶ Chạy Phân tích</button>
+            <button id="reset">↺ Đặt lại</button>
+            <div style="flex-grow: 1; display: flex; align-items: center; gap: 15px; font-weight: bold;">
+                <span id="progressText">Tiến trình (0/4):</span>
+                <input type="range" id="timeSlider" min="0" max="4" value="0">
+            </div>
+        </section>
+
+        <!-- Canvas hiển thị 4K/Retina -->
+        <section class="simulation" aria-label="Mô phỏng">
+            <canvas id="simCanvas"></canvas>
+        </section>
+
+        <section class="content">
+            <p><strong>Nội dung đề bài:</strong></p>
+            <p><strong>Câu 3:</strong> Người ta đo đường kính của 61 cây gỗ được trồng sau 12 năm (đơn vị: centimét), họ thu được bảng tần số ghép nhóm sau:</p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Đường kính</th>
+                        <th>[20; 25)</th>
+                        <th>[25; 30)</th>
+                        <th>[30; 35)</th>
+                        <th>[35; 40)</th>
+                        <th>[40; 45)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Số cây</strong></td>
+                        <td>4</td>
+                        <td>12</td>
+                        <td>26</td>
+                        <td>13</td>
+                        <td>6</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>Kết quả làm tròn đến hàng phần trăm.</p>
+            <ul>
+                <li>a) Cỡ mẫu của mẫu số liệu là \( n = 61 \).</li>
+                <li>b) Tứ phân vị thứ nhất của mẫu số liệu ghép nhóm là: \( Q_1 \approx 19,69 \).</li>
+                <li>c) Tứ phân vị thứ hai của mẫu số liệu ghép nhóm là: \( Q_2 \approx 32,79 \).</li>
+                <li>d) Tứ phân vị thứ ba của mẫu số liệu ghép nhóm là: \( Q_3 \approx 36,44 \).</li>
+            </ul>
+
+            <hr style="border:1px solid #334155; margin: 20px 0;">
+
+            <h2>Phần 1: Hướng dẫn giải toán học chi tiết (Cách 1 - Tự luận)</h2>
+            <p>Để tìm các tứ phân vị, trước tiên ta lập bảng tần số tích lũy:</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nhóm</th>
+                        <th>[20; 25)</th>
+                        <th>[25; 30)</th>
+                        <th>[30; 35)</th>
+                        <th>[35; 40)</th>
+                        <th>[40; 45)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Tần số (\(n_i\))</strong></td>
+                        <td>4</td>
+                        <td>12</td>
+                        <td>26</td>
+                        <td>13</td>
+                        <td>6</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tần số tích lũy (\(cf_i\))</strong></td>
+                        <td>4</td>
+                        <td>16</td>
+                        <td>42</td>
+                        <td>55</td>
+                        <td>61</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>a) Kiểm tra cỡ mẫu:</strong> Cỡ mẫu \(n = 4 + 12 + 26 + 13 + 6 = 61\). \(\Rightarrow\) Phát biểu a) Đúng.</p>
+
+            <p><strong>b) Tính Tứ phân vị thứ nhất (\(Q_1\)):</strong></p>
+            <ul>
+                <li>Vị trí \(Q_1\): \(\frac{n}{4} = \frac{61}{4} = 15.25\).</li>
+                <li>Giá trị 15.25 lớn hơn 4 và nhỏ hơn 16, nên nhóm chứa \(Q_1\) là [25; 30).</li>
+                <li>Áp dụng công thức: \(Q_1 = u_m + \frac{\frac{n}{4} - cf_{m-1}}{n_m} \cdot h\)</li>
+                <li>\(Q_1 = 25 + \frac{15.25 - 4}{12} \cdot 5 = 25 + 4.6875 = 29.6875 \approx 29.69\).</li>
+                <li>\(\Rightarrow\) Phát biểu b) khẳng định \(Q_1 \approx 19.69\) là Sai.</li>
+            </ul>
+
+            <p><strong>c) Tính Tứ phân vị thứ hai / Trung vị (\(Q_2\)):</strong></p>
+            <ul>
+                <li>Vị trí \(Q_2\): \(\frac{n}{2} = \frac{61}{2} = 30.5\).</li>
+                <li>Giá trị 30.5 lớn hơn 16 và nhỏ hơn 42, nên nhóm chứa \(Q_2\) là [30; 35).</li>
+                <li>Áp dụng công thức: \(Q_2 = u_m + \frac{\frac{n}{2} - cf_{m-1}}{n_m} \cdot h\)</li>
+                <li>\(Q_2 = 30 + \frac{30.5 - 16}{26} \cdot 5 \approx 32.788... \approx 32.79\).</li>
+                <li>\(\Rightarrow\) Phát biểu c) Đúng.</li>
+            </ul>
+
+            <p><strong>d) Tính Tứ phân vị thứ ba (\(Q_3\)):</strong></p>
+            <ul>
+                <li>Vị trí \(Q_3\): \(\frac{3n}{4} = \frac{3 \times 61}{4} = 45.75\).</li>
+                <li>Giá trị 45.75 lớn hơn 42 và nhỏ hơn 55, nên nhóm chứa \(Q_3\) là [35; 40).</li>
+                <li>Áp dụng công thức: \(Q_3 = u_m + \frac{\frac{3n}{4} - cf_{m-1}}{n_m} \cdot h\)</li>
+                <li>\(Q_3 = 35 + \frac{45.75 - 42}{13} \cdot 5 \approx 36.442... \approx 36.44\).</li>
+                <li>\(\Rightarrow\) Phát biểu d) Đúng.</li>
+            </ul>
+
+            <hr style="border:1px solid #334155; margin: 20px 0;">
+
+            <h2>Phần 2: Hướng dẫn bấm máy tính cầm tay</h2>
+            <p><em>Lưu ý quan trọng từ chuyên gia: Các tính năng tìm Tứ phân vị (\(Q_1, Med, Q_3\)) có sẵn trong chế độ Thống kê (STAT) của mọi dòng máy tính cầm tay hiện nay chỉ áp dụng cho mẫu số liệu rời rạc. Máy tính KHÔNG có sẵn chức năng tự động tính nội suy tứ phân vị cho mẫu số liệu ghép nhóm. Do đó, phương pháp tối ưu là dùng chế độ tính toán cơ bản (COMP) nhập trực tiếp công thức phân số để tránh sai số.</em></p>
+
+            <h3>1. Các dòng máy Casio fx-580VN X, Vinacal 680EX Plus, Thiên Long Flexio</h3>
+            <ul>
+                <li><strong>Bước 1:</strong> Đưa máy về chế độ tính toán bình thường: Bấm <kbd class="key-3d key-func">MENU</kbd> \(\rightarrow\) <kbd class="key-3d key-num">1</kbd>.</li>
+                <li><strong>Bước 2:</strong> Nhập trực tiếp biểu thức tìm \(Q_1\) dựa vào số liệu đã phân tích:<br>
+                    Bấm <kbd class="key-3d key-num">25</kbd> <kbd class="key-3d key-nav">+</kbd> \(\rightarrow\) phím phân số ( <kbd class="key-3d key-func">■/■</kbd> ).<br>
+                    Tử số bấm: <kbd class="key-3d key-num">15.25</kbd> <kbd class="key-3d key-nav">-</kbd> <kbd class="key-3d key-num">4</kbd><br>
+                    Mẫu số bấm: <kbd class="key-3d key-num">12</kbd><br>
+                    Bấm mũi tên phải <kbd class="key-3d key-nav">→</kbd> để đưa con trỏ ra ngoài phân số, bấm <kbd class="key-3d key-nav">×</kbd> <kbd class="key-3d key-num">5</kbd>.
+                </li>
+                <li><strong>Bước 3:</strong> Bấm <kbd class="key-3d key-nav">=</kbd>, sau đó phím <kbd class="key-3d key-func">S⇔D</kbd> để ra kết quả \(29.6875\).<br>
+                <em>Thực hiện hoàn toàn tương tự để nhập biểu thức cho \(Q_2\) và \(Q_3\).</em></li>
+            </ul>
+
+            <h3>2. Dòng máy Casio fx-880BTG</h3>
+            <p>Giao diện dòng này mới hơn nhưng thao tác tính biểu thức hoàn toàn giống nhau.</p>
+            <ul>
+                <li><strong>Bước 1:</strong> Nhấn <kbd class="key-3d key-func">HOME</kbd> \(\rightarrow\) chọn Calculate \(\rightarrow\) nhấn <kbd class="key-3d key-nav">OK</kbd>.</li>
+                <li><strong>Bước 2:</strong> Nhập công thức cho \(Q_2\):<br>
+                    Bấm <kbd class="key-3d key-num">30</kbd> <kbd class="key-3d key-nav">+</kbd> \(\rightarrow\) phím phân số ( <kbd class="key-3d key-func">■/■</kbd> ) \(\rightarrow\) nhập tử <kbd class="key-3d key-num">30.5</kbd> <kbd class="key-3d key-nav">-</kbd> <kbd class="key-3d key-num">16</kbd> \(\rightarrow\) xuống mẫu nhập <kbd class="key-3d key-num">26</kbd> \(\rightarrow\) sang phải nhập <kbd class="key-3d key-nav">×</kbd> <kbd class="key-3d key-num">5</kbd>.
+                </li>
+                <li><strong>Bước 3:</strong> Nhấn <kbd class="key-3d key-nav">EXE</kbd>. Để xem kết quả thập phân, nhấn <kbd class="key-3d key-func">FORMAT</kbd> \(\rightarrow\) chọn Decimal \(\rightarrow\) <kbd class="key-3d key-nav">OK</kbd>. Máy hiện xấp xỉ \(32.78846\).</li>
+            </ul>
+
+            <h3>3. Các dòng Casio fx-570VN Plus, 570ES Plus, Vinacal 570ES Plus II, Vinaplus FX</h3>
+            <ul>
+                <li><strong>Bước 1:</strong> Nhấn <kbd class="key-3d key-func">MODE</kbd> \(\rightarrow\) <kbd class="key-3d key-num">1</kbd> để vào chế độ COMP.</li>
+                <li><strong>Bước 2:</strong> Bấm phím nhập công thức tính \(Q_3\):<br>
+                    Bấm <kbd class="key-3d key-num">35</kbd> <kbd class="key-3d key-nav">+</kbd> \(\rightarrow\) phím phân số ( <kbd class="key-3d key-func">■/■</kbd> ).<br>
+                    Tử số nhập: <kbd class="key-3d key-num">45.75</kbd> <kbd class="key-3d key-nav">-</kbd> <kbd class="key-3d key-num">42</kbd><br>
+                    Bấm mũi tên xuống <kbd class="key-3d key-nav">↓</kbd>, mẫu số nhập: <kbd class="key-3d key-num">13</kbd><br>
+                    Bấm mũi tên phải <kbd class="key-3d key-nav">→</kbd>, nhập tiếp: <kbd class="key-3d key-nav">×</kbd> <kbd class="key-3d key-num">5</kbd>
+                </li>
+                <li><strong>Bước 3:</strong> Nhấn <kbd class="key-3d key-nav">=</kbd>, rồi nhấn phím <kbd class="key-3d key-func">S⇔D</kbd> để đổi kết quả phân số ra số thập phân \(\approx 36.44\).</li>
+            </ul>
+        </section>
+
+        <section class="pedagogy" aria-label="Gợi ý sư phạm">
+            <h3>💡 Góc tư duy & Tương tác trên lớp</h3>
+            <ol>
+                <li>Vì sao khi tìm \(Q_1\), vị trí là 15.25 lại rơi vào nhóm [25; 30) mà không phải nhóm [20; 25)? Sự liên hệ với Tần số tích lũy (\(cf_i\)) là gì?</li>
+                <li>Khoảng cách giữa \(Q_1\) và \(Q_2\) so với khoảng cách giữa \(Q_2\) và \(Q_3\) cho chúng ta biết điều gì về sự phân tán của đường kính cây gỗ?</li>
+                <li>Nếu không tính toán nội suy mà sử dụng trực tiếp chức năng Tứ phân vị trong chế độ STAT của máy tính, kết quả sai lệch sẽ sinh ra từ đâu?</li>
+            </ol>
+        </section>
+
+        <button class="btn-exit" onclick="closeApp()">⏻ Thoát và đóng trình duyệt</button>
+
+        <div class="watermark">
+            Tác giả: Vũ Trung Thành - Tổ Toán-Tin, THPT Bình Giang, Zalo: 0979791802
+        </div>
+    </main>
+</div>
+
+<script>
+    // --- DỮ LIỆU BÀI TOÁN ---
+    const data = [
+        { label: "[20; 25)", freq: 4, cf: 4, u: 20 },
+        { label: "[25; 30)", freq: 12, cf: 16, u: 25 }, // Q1 Class
+        { label: "[30; 35)", freq: 26, cf: 42, u: 30 }, // Q2 Class
+        { label: "[35; 40)", freq: 13, cf: 55, u: 35 }, // Q3 Class
+        { label: "[40; 45)", freq: 6, cf: 61, u: 40 }
+    ];
+    const N = 61;
+    const q1Val = 29.69;
+    const q2Val = 32.79;
+    const q3Val = 36.44;
+
+    let currentStyle = 'realistic'; 
+    let isPlaying = false;
+    let stepIndex = 0; // 0: Raw, 1: CF, 2: Q1, 3: Q2, 4: Q3
+    let lastTime = 0;
+    let animationReq;
+
+    // --- CẤU HÌNH ĐỘ NÉT CAO CANVAS (RETINA/4K) ---
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    function scaleCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+        
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        
+        ctx.scale(dpr, dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        
+        draw();
+    }
+    window.addEventListener('resize', scaleCanvas);
+
+    // --- ĐIỀU KHIỂN SỰ KIỆN ---
+    const styleToggle = document.getElementById('styleToggle');
+    const playPause = document.getElementById('playPause');
+    const resetBtn = document.getElementById('reset');
+    const timeSlider = document.getElementById('timeSlider');
+    const progressText = document.getElementById('progressText');
+
+    styleToggle.addEventListener('click', () => {
+        currentStyle = currentStyle === 'realistic' ? 'textbook' : 'realistic';
+        styleToggle.textContent = currentStyle === 'realistic' ? 'Đổi sang Sách giáo khoa' : 'Đổi sang Chân thực';
+        draw();
+    });
+
+    playPause.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        playPause.textContent = isPlaying ? '⏸ Tạm dừng' : '▶ Chạy Phân tích';
+        if (isPlaying && stepIndex >= 4) resetAll();
+        if (isPlaying) requestAnimationFrame(loop);
+    });
+
+    resetBtn.addEventListener('click', resetAll);
+
+    timeSlider.addEventListener('input', (e) => {
+        stepIndex = parseInt(e.target.value);
+        progressText.textContent = `Tiến trình (${stepIndex}/4):`;
+        draw();
+    });
+
+    function resetAll() {
+        isPlaying = false;
+        playPause.textContent = '▶ Chạy Phân tích';
+        stepIndex = 0;
+        timeSlider.value = 0;
+        progressText.textContent = `Tiến trình (0/4):`;
+        draw();
+    }
+
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        if (timestamp - lastTime > 2000) { // Chuyển bước sau mỗi 2 giây
+            if (stepIndex < 4) {
+                stepIndex++;
+                timeSlider.value = stepIndex;
+                progressText.textContent = `Tiến trình (${stepIndex}/4):`;
+                lastTime = timestamp;
+                draw();
+            } else {
+                isPlaying = false;
+                playPause.textContent = '▶ Chạy Phân tích';
+                return;
+            }
+        }
+        if (isPlaying) animationReq = requestAnimationFrame(loop);
+    }
+
+    // --- HÀM VẼ (2 CHẾ ĐỘ) ---
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+        if (currentStyle === 'realistic') drawRealistic();
+        else drawTextbook();
+    }
+
+    // Chế độ 1: Chân thực (Chủ đề Lâm nghiệp / Sinh thái Neon)
+    function drawRealistic() {
+        // Nền tối Gradient
+        const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+        bgGradient.addColorStop(0, '#020617');
+        bgGradient.addColorStop(1, '#0f172a');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, width, height);
+
+        const padX = 70, padY = 80;
+        const chartW = width - padX * 2;
+        const chartH = height - padY * 2;
+        const barW = chartW / data.length;
+        const maxFreq = 30; // 26 là lớn nhất
+
+        // Lưới điện tử mờ
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        for(let i = 0; i <= maxFreq; i+=5) {
+            let y = height - padY - (i/maxFreq)*chartH;
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(width - padX, y); ctx.stroke();
+            
+            ctx.fillStyle = '#64748b';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(i, padX - 10, y + 5);
+        }
+
+        // Vẽ biểu đồ Histogram
+        ctx.textAlign = 'center';
+        for (let i = 0; i < data.length; i++) {
+            const hBar = (data[i].freq / maxFreq) * chartH;
+            const x = padX + i * barW;
+            const y = height - padY - hBar;
+
+            let isTarget = false;
+            let barColor1 = '#10b981', barColor2 = '#047857'; // Mặc định xanh lá (cây)
+            let shadowColor = '#10b981';
+
+            if (stepIndex === 2 && i === 1) { isTarget = true; barColor1 = '#f59e0b'; barColor2 = '#b45309'; shadowColor = '#f59e0b'; } // Q1
+            if (stepIndex === 3 && i === 2) { isTarget = true; barColor1 = '#ef4444'; barColor2 = '#b91c1c'; shadowColor = '#ef4444'; } // Q2
+            if (stepIndex === 4 && i === 3) { isTarget = true; barColor1 = '#8b5cf6'; barColor2 = '#5b21b6'; shadowColor = '#8b5cf6'; } // Q3
+
+            // Đổ bóng & Gradient Cột
+            ctx.shadowColor = isTarget ? shadowColor : 'transparent';
+            ctx.shadowBlur = isTarget ? 20 : 0;
+            
+            const barGrad = ctx.createLinearGradient(0, y, 0, height - padY);
+            barGrad.addColorStop(0, barColor1);
+            barGrad.addColorStop(1, barColor2);
+            
+            ctx.fillStyle = barGrad;
+            ctx.beginPath();
+            ctx.roundRect(x + 5, y, barW - 10, hBar, [4, 4, 0, 0]);
+            ctx.fill();
+            ctx.shadowBlur = 0; 
+            
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Số liệu Tần số
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(data[i].freq, x + barW/2, y + 25);
+
+            // Nhãn trục X
+            ctx.fillStyle = isTarget ? shadowColor : '#38bdf8';
+            ctx.font = 'bold 14px "Courier New"';
+            ctx.fillText(data[i].label, x + barW/2, height - padY + 25);
+
+            // Tần số tích lũy (cf)
+            if (stepIndex >= 1) {
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 16px Courier New';
+                ctx.fillText(`cf=${data[i].cf}`, x + barW/2, y - 10);
+            }
+        }
+
+        // HUD Trạng thái
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+        ctx.roundRect(padX, 15, 200, 45, 8);
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText(`Tổng số cây n = 61`, padX + 20, 43);
+
+        // Hiển thị công thức tương ứng
+        if (stepIndex >= 2) {
+            let medX, medY, text1, text2, color;
+            if (stepIndex === 2) { // Q1
+                medX = padX + 1 * barW + barW/2;
+                medY = height - padY - (data[1].freq / maxFreq) * chartH - 80;
+                text1 = `Q1: n/4 = 15.25 (Nhóm 2)`;
+                text2 = `Q1 ≈ 29.69 cm`;
+                color = '#f59e0b';
+            } else if (stepIndex === 3) { // Q2
+                medX = padX + 2 * barW + barW/2;
+                medY = height - padY - (data[2].freq / maxFreq) * chartH - 80;
+                text1 = `Q2: n/2 = 30.5 (Nhóm 3)`;
+                text2 = `Q2 ≈ 32.79 cm`;
+                color = '#ef4444';
+            } else if (stepIndex === 4) { // Q3
+                medX = padX + 3 * barW + barW/2;
+                medY = height - padY - (data[3].freq / maxFreq) * chartH - 80;
+                text1 = `Q3: 3n/4 = 45.75 (Nhóm 4)`;
+                text2 = `Q3 ≈ 36.44 cm`;
+                color = '#8b5cf6';
+            }
+
+            // Hộp Công thức 
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.roundRect(medX - 110, medY - 20, 220, 60, 8);
+            ctx.fill();
+            ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.font = '14px Courier New';
+            ctx.fillText(text1, medX, medY);
+            ctx.fillStyle = color;
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(text2, medX, medY + 25);
+            
+            // Mũi tên chỉ xuống
+            ctx.beginPath();
+            ctx.moveTo(medX, medY + 40);
+            ctx.lineTo(medX, medY + 65);
+            ctx.strokeStyle = color; ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(medX-5, medY+60); ctx.lineTo(medX, medY+70); ctx.lineTo(medX+5, medY+60); ctx.fillStyle=color; ctx.fill();
+        }
+    }
+
+    // Chế độ 2: Sách giáo khoa (Nền sáng, chuẩn khoa học)
+    function drawTextbook() {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        
+        const padX = 80, padY = 80;
+        const chartW = width - padX * 2;
+        const chartH = height - padY * 2;
+        const barW = chartW / data.length;
+        const maxFreq = 30;
+        
+        // Trục tọa độ 
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        
+        // Trục Y
+        ctx.beginPath(); ctx.moveTo(padX, padY - 20); ctx.lineTo(padX, height - padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padX - 6, padY - 10); ctx.lineTo(padX, padY - 25); ctx.lineTo(padX + 6, padY - 10); ctx.fillStyle = '#000'; ctx.fill();
+
+        // Trục X
+        ctx.beginPath(); ctx.moveTo(padX, height - padY); ctx.lineTo(width - padX + 20, height - padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(width - padX + 10, height - padY - 6); ctx.lineTo(width - padX + 25, height - padY); ctx.lineTo(width - padX + 10, height - padY + 6); ctx.fill();
+
+        // Lưới trục Y
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '15px Times New Roman';
+        for(let i = 0; i <= maxFreq; i+=5) {
+            let y = height - padY - (i/maxFreq)*chartH;
+            ctx.beginPath(); ctx.moveTo(padX - 5, y); ctx.lineTo(padX, y); ctx.stroke();
+            
+            ctx.save();
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(width - padX, y); ctx.stroke();
+            ctx.restore();
+
+            ctx.fillText(i, padX - 10, y);
+        }
+
+        ctx.fillText("Số cây", padX + 40, padY - 30);
+        ctx.fillText("Đường kính (cm)", width - padX + 50, height - padY + 35);
+
+        // Vẽ biểu đồ Histogram
+        ctx.textAlign = 'center';
+        for (let i = 0; i < data.length; i++) {
+            const hBar = (data[i].freq / maxFreq) * chartH;
+            const x = padX + i * barW;
+            const y = height - padY - hBar;
+
+            let isTarget = false;
+            let barColor = '#e0f2fe';
+            let strokeColor = '#0284c7';
+
+            if (stepIndex === 2 && i === 1) { isTarget = true; barColor = '#fef3c7'; strokeColor = '#d97706'; }
+            if (stepIndex === 3 && i === 2) { isTarget = true; barColor = '#fee2e2'; strokeColor = '#e11d48'; }
+            if (stepIndex === 4 && i === 3) { isTarget = true; barColor = '#f3e8ff'; strokeColor = '#7e22ce'; }
+
+            // Hình chữ nhật
+            ctx.fillStyle = barColor;
+            ctx.fillRect(x, y, barW, hBar);
+            
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, barW, hBar);
+
+            // Tần số
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 16px Times New Roman';
+            ctx.fillText(data[i].freq, x + barW/2, y + 20);
+
+            // Tần số tích lũy
+            if (stepIndex >= 1) {
+                ctx.fillStyle = '#b91c1c';
+                ctx.font = 'italic 16px Times New Roman';
+                ctx.fillText(`cf=${data[i].cf}`, x + barW/2, y - 10);
+            }
+
+            // Nhãn X
+            ctx.fillStyle = '#000000';
+            ctx.font = '15px Times New Roman';
+            ctx.fillText(data[i].label, x + barW/2, height - padY + 20);
+        }
+
+        // Logic & Phân tích SGK
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#000';
+        ctx.font = '18px Times New Roman';
+        ctx.fillText(`Cỡ mẫu n = 61`, padX + 20, 30);
+
+        if (stepIndex >= 2) {
+            let medX, medY, text1, text2, text3;
+            if (stepIndex === 2) {
+                medX = padX + 1 * barW + barW/2;
+                medY = height - padY - (data[1].freq / maxFreq) * chartH - 90;
+                text1 = `Q1 = 25 + [(15.25 - 4)/12] × 5`;
+                text2 = `Q1 ≈ 29.69`;
+            } else if (stepIndex === 3) {
+                medX = padX + 2 * barW + barW/2;
+                medY = height - padY - (data[2].freq / maxFreq) * chartH - 90;
+                text1 = `Q2 = 30 + [(30.5 - 16)/26] × 5`;
+                text2 = `Q2 ≈ 32.79`;
+            } else if (stepIndex === 4) {
+                medX = padX + 3 * barW + barW/2;
+                medY = height - padY - (data[3].freq / maxFreq) * chartH - 90;
+                text1 = `Q3 = 35 + [(45.75 - 42)/13] × 5`;
+                text2 = `Q3 ≈ 36.44`;
+            }
+
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'center';
+            ctx.fillText(text1, medX, medY);
+            
+            ctx.fillStyle = '#b91c1c';
+            ctx.font = 'bold 20px Times New Roman';
+            ctx.fillText(text2, medX, medY + 25);
+        }
+    }
+
+    // --- TIỆN ÍCH HỖ TRỢ ---
+    function toggleFullScreen() {
+        const wrap = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (wrap.requestFullscreen) wrap.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
+    function closeApp() {
+        if (confirm("Thầy có chắc chắn muốn thoát mô phỏng và đóng tab này không?")) {
+            window.close();
+            document.body.innerHTML = "<h2 style='text-align:center; margin-top:20vh; color:var(--accent-color);'>Mô phỏng đã được đóng. Thầy có thể tắt tab trình duyệt này.</h2>";
+        }
+    }
+
+    window.onload = () => {
+        scaleCanvas();
+        resetAll();
+    };
+</script>
+
+</body>
+</html>

@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô Phỏng Thống Kê - Tính Trung Vị Mẫu Số Liệu Ghép Nhóm</title>
+    
+    <!-- Tích hợp MathJax để hiển thị công thức Toán học sắc nét -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --panel-bg: #1e1e1e;
+            --accent-color: #00e5ff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--panel-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            font-size: 1.6rem;
+            text-transform: uppercase;
+        }
+
+        /* --- Vùng Điều khiển --- */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #282828;
+            padding: 15px;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #00b4d8, #0077b6);
+            color: white;
+            box-shadow: 3px 3px 6px #111, -2px -2px 5px #333;
+            transition: all 0.2s ease;
+        }
+
+        button:active { transform: translateY(2px) scale(0.98); }
+        button:hover { filter: brightness(1.2); }
+
+        .btn-fullscreen { background: linear-gradient(145deg, #ff9800, #e65100); }
+        .btn-exit {
+            background: linear-gradient(145deg, #f44336, #c62828);
+            display: block;
+            margin: 40px auto 10px auto;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            min-width: 200px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        /* --- Canvas Mô phỏng 4K --- */
+        .simulation {
+            width: 100%;
+            height: 480px; 
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #555;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* --- Định dạng Nội dung --- */
+        .content { font-size: 1.15rem; color: #ececec; }
+        .content h2, .content h3 { color: #ffca28; margin: 20px 0 10px 0; }
+        .content p, .content ul { margin-bottom: 12px; }
+        .content ul { padding-left: 25px; }
+
+        /* Bảng dữ liệu */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background-color: #2a2a2a;
+            text-align: center;
+        }
+        table.data-table th, table.data-table td { border: 1px solid #555; padding: 12px; }
+        table.data-table th { background-color: #333; color: var(--accent-color); }
+
+        /* --- CSS Phím bấm 3D Nổi bật --- */
+        kbd.key-3d {
+            display: inline-block;
+            margin: 0 4px;
+            padding: 4px 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #ffffff; /* Chữ tương phản */
+            border-radius: 6px;
+            transform: translateY(-2px);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            user-select: none;
+        }
+        
+        /* Phím Chức năng (Đỏ nổi bật) */
+        kbd.key-func {
+            background: linear-gradient(180deg, #ff5252 0%, #c62828 100%);
+            border: 1px solid #7f0000;
+            box-shadow: 0 4px 0 #7f0000, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* Phím Số (Xanh lá) */
+        kbd.key-num {
+            background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+            border: 1px solid #1b5e20;
+            box-shadow: 0 4px 0 #1b5e20, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* Phím Điều hướng / Tính toán (Xanh dương) */
+        kbd.key-nav {
+            background: linear-gradient(180deg, #448aff 0%, #1565c0 100%);
+            border: 1px solid #0d47a1;
+            box-shadow: 0 4px 0 #0d47a1, 0 5px 8px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* --- Gợi ý sư phạm --- */
+        .pedagogy {
+            background: rgba(0, 229, 255, 0.05);
+            border-left: 4px solid var(--accent-color);
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 4px;
+        }
+        .pedagogy h3 { color: var(--accent-color); margin-bottom: 10px; }
+        .pedagogy ol { padding-left: 25px; font-size: 1.1rem; }
+
+        /* --- Watermark in chìm --- */
+        .watermark {
+            text-align: center;
+            opacity: 0.15;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffffff;
+            padding: 20px 0;
+            pointer-events: none;
+            user-select: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .simulation { height: 350px; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="mainWrapper">
+    <header>
+        <h1>Mô phỏng: Tính Trung Vị Mẫu Số Liệu Ghép Nhóm</h1>
+        <button class="btn-fullscreen" onclick="toggleFullScreen()">⛶ Toàn Màn Hình</button>
+    </header>
+
+    <main>
+        <section class="controls" aria-label="Điều khiển">
+            <button id="styleToggle">Đổi sang Sách giáo khoa</button>
+            <button id="playPause">▶ Chạy Phân tích Trung vị</button>
+            <button id="reset">↺ Đặt lại</button>
+            <div style="flex-grow: 1; display: flex; align-items: center; gap: 15px; font-weight: bold;">
+                <span id="progressText">Tiến trình (0/5):</span>
+                <input type="range" id="timeSlider" min="0" max="5" value="0">
+            </div>
+        </section>
+
+        <!-- Canvas hiển thị 4K/Retina -->
+        <section class="simulation" aria-label="Mô phỏng">
+            <canvas id="simCanvas"></canvas>
+        </section>
+
+        <section class="content">
+            <p><strong>Luyện tập 2.</strong> Ghi lại tốc độ bóng trong 200 lần giao bóng của một vận động viên môn quần vợt cho kết quả như bảng bên.</p>
+            <p><strong>Tính trung vị của mẫu số liệu ghép nhóm này.</strong></p>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Tốc độ \(v\) (km/h)</th>
+                        <th>[150; 155)</th>
+                        <th>[155; 160)</th>
+                        <th>[160; 165)</th>
+                        <th>[165; 170)</th>
+                        <th>[170; 175)</th>
+                        <th>[175; 180)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Số lần</strong></td>
+                        <td>18</td>
+                        <td>28</td>
+                        <td>35</td>
+                        <td>43</td>
+                        <td>41</td>
+                        <td>35</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <hr style="border:1px solid #444; margin: 20px 0;">
+
+            <h2>Phân tích toán học trước khi bấm máy:</h2>
+            <p>Trung vị (\(M_e\) hoặc \(Q_2\)) của mẫu số liệu ghép nhóm không thể tìm trực tiếp bằng chức năng Thống kê (STAT) trên các dòng máy tính cầm tay thông thường. Ta bắt buộc phải xác định nhóm chứa trung vị và dùng máy tính để tính toán giá trị biểu thức.</p>
+            <ol>
+                <li>Tổng số lần giao bóng \(n = 200\). Nửa số liệu là \(\frac{n}{2} = 100\).</li>
+                <li>Cộng dồn tần số (tần số tích lũy) để tìm nhóm chứa giá trị thứ 100:
+                    <ul>
+                        <li>Nhóm 1: 18</li>
+                        <li>Nhóm 2: \(18 + 28 = 46\)</li>
+                        <li>Nhóm 3: \(46 + 35 = 81\)</li>
+                        <li>Nhóm 4: \(81 + 43 = 124\) (Chứa giá trị thứ 100). \(\Rightarrow\) <strong>Nhóm chứa trung vị là [165; 170).</strong></li>
+                    </ul>
+                </li>
+                <li>Xác định các thông số cho công thức:
+                    <ul>
+                        <li>Đầu mút trái \(u_m = 165\).</li>
+                        <li>Độ dài nhóm \(h = 170 - 165 = 5\).</li>
+                        <li>Tần số nhóm chứa trung vị \(n_m = 43\).</li>
+                        <li>Tần số tích lũy nhóm liền trước \(cf_{m-1} = 81\).</li>
+                        <li>Công thức: \(M_e = u_m + \frac{\frac{n}{2} - cf_{m-1}}{n_m} \times h\)</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <hr style="border:1px solid #444; margin: 20px 0;">
+
+            <h2>Quy trình bấm máy chi tiết</h2>
+
+            <h3>1. Nhóm máy Casio fx-580VN X và Vinacal 680EX Plus / Thiên Long Flexio</h3>
+            <p>Dòng máy này tính toán biểu thức phân số trực tiếp rất nhanh trong chế độ tính toán chung (COMP).</p>
+            <ul>
+                <li><strong>Bước 1:</strong> Đảm bảo máy ở chế độ tính toán thường. Nhấn <kbd class="key-3d key-func">MENU</kbd> \(\rightarrow\) <kbd class="key-3d key-num">1</kbd>.</li>
+                <li><strong>Bước 2:</strong> Nhập trực tiếp biểu thức công thức tính trung vị vào máy: <br>
+                    <kbd class="key-3d key-num">165</kbd> <kbd class="key-3d key-nav">+</kbd> \(\frac{100 - 81}{43}\) <kbd class="key-3d key-nav">×</kbd> <kbd class="key-3d key-num">5</kbd>
+                </li>
+                <li><strong>Bước 3:</strong> Nhấn phím <kbd class="key-3d key-nav">=</kbd>.</li>
+                <li><strong>Bước 4:</strong> Nhấn phím <kbd class="key-3d key-func">S⇔D</kbd> để chuyển đổi kết quả phân số \(\frac{7190}{43}\) ra số thập phân. \(\Rightarrow\) <strong>Kết quả: \(M_e \approx 167.21\) (km/h).</strong></li>
+            </ul>
+
+            <h3>2. Nhóm máy Casio fx-880BTG</h3>
+            <ul>
+                <li>Hỗ trợ tìm tần số tích lũy (Tùy chọn nếu không muốn nhẩm):
+                    <ul>
+                        <li>Nhấn <kbd class="key-3d key-func">HOME</kbd> \(\rightarrow\) chọn Spreadsheet \(\rightarrow\) <kbd class="key-3d key-nav">OK</kbd>.</li>
+                        <li>Nhập các tần số vào cột A (A1=18, A2=28, A3=35,...).</li>
+                        <li>Tại ô B1 nhập =A1. Tại ô B2, nhấn <kbd class="key-3d key-func">TOOLS</kbd> \(\rightarrow\) Fill Formula \(\rightarrow\) Form: =B1+A2 \(\rightarrow\) Range: B2:B6 \(\rightarrow\) <kbd class="key-3d key-nav">EXE</kbd>. Cột B sẽ hiển thị dãy tần số tích lũy giúp bạn xác định nhanh nhóm [165; 170).</li>
+                    </ul>
+                </li>
+                <li>Thực hiện tính Trung vị:
+                    <ul>
+                        <li>Nhấn <kbd class="key-3d key-func">HOME</kbd> \(\rightarrow\) chọn Calculate \(\rightarrow\) <kbd class="key-3d key-nav">OK</kbd>.</li>
+                        <li>Bấm công thức tương tự. Nhấn <kbd class="key-3d key-nav">EXE</kbd>. Nhấn <kbd class="key-3d key-func">FORMAT</kbd> \(\rightarrow\) Decimal để lấy kết quả thập phân \(167.2093...\)</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>3. Nhóm máy Casio fx-570VN Plus, 570ES Plus, Vinacal 570ES Plus II và Vinaplus FX</h3>
+            <ul>
+                <li><strong>Bước 1:</strong> Đưa máy về chế độ tính toán cơ bản bằng cách nhấn <kbd class="key-3d key-func">MODE</kbd> \(\rightarrow\) <kbd class="key-3d key-num">1</kbd> (COMP).</li>
+                <li><strong>Bước 2:</strong> Bấm phím nhập công thức theo thứ tự: <br>
+                    <kbd class="key-3d key-num">165</kbd> \(\rightarrow\) <kbd class="key-3d key-nav">+</kbd> \(\rightarrow\) phím phân số ( \(\frac{\blacksquare}{\blacksquare}\) ) \(\rightarrow\) tử số nhập <kbd class="key-3d key-num">100</kbd> <kbd class="key-3d key-nav">-</kbd> <kbd class="key-3d key-num">81</kbd> \(\rightarrow\) bấm mũi tên xuống <kbd class="key-3d key-nav">↓</kbd> \(\rightarrow\) mẫu số nhập <kbd class="key-3d key-num">43</kbd> \(\rightarrow\) bấm mũi tên phải <kbd class="key-3d key-nav">→</kbd> \(\rightarrow\) <kbd class="key-3d key-nav">×</kbd> \(\rightarrow\) <kbd class="key-3d key-num">5</kbd>.
+                </li>
+                <li><strong>Bước 3:</strong> Nhấn <kbd class="key-3d key-nav">=</kbd>.</li>
+                <li><strong>Bước 4:</strong> Nhấn phím <kbd class="key-3d key-func">S⇔D</kbd> để ra kết quả số thập phân xấp xỉ \(167.21\).</li>
+            </ul>
+        </section>
+
+        <section class="pedagogy" aria-label="Gợi ý sư phạm">
+            <h3>💡 Góc tư duy & Tương tác trên lớp</h3>
+            <ol>
+                <li>Tại sao chúng ta phải đi tìm vị trí \(\frac{n}{2} = 100\) bằng cách cộng dồn tần số thay vì nhìn vào số lần giao bóng cao nhất?</li>
+                <li>Ý nghĩa của phép tính \(\frac{100 - 81}{43} \times 5\) trong công thức là gì? Nó giúp ta xác định điều gì bên trong khoảng [165; 170)?</li>
+                <li>Với kết quả \(M_e \approx 167.21\) km/h, ta có thể kết luận gì về tốc độ giao bóng của vận động viên này trong 200 lần thử nghiệm?</li>
+            </ol>
+        </section>
+
+        <button class="btn-exit" onclick="closeApp()">⏻ Thoát và đóng trình duyệt</button>
+
+        <div class="watermark">
+            Tác giả: Vũ Trung Thành - Tổ Toán-Tin, THPT Bình Giang, Zalo: 0979791802
+        </div>
+    </main>
+</div>
+
+<script>
+    // --- DỮ LIỆU BÀI TOÁN ---
+    const data = [
+        { label: "[150; 155)", freq: 18, cf: 18, u: 150 },
+        { label: "[155; 160)", freq: 28, cf: 46, u: 155 },
+        { label: "[160; 165)", freq: 35, cf: 81, u: 160 },
+        { label: "[165; 170)", freq: 43, cf: 124, u: 165 }, // Median Class
+        { label: "[170; 175)", freq: 41, cf: 165, u: 170 },
+        { label: "[175; 180)", freq: 35, cf: 200, u: 175 }
+    ];
+    const N = 200;
+    const halfN = 100;
+    const finalMedian = 167.21;
+
+    let currentStyle = 'realistic'; 
+    let isPlaying = false;
+    let stepIndex = 0; // 0: raw bars, 1: show CF text, 2: highlight n/2, 3: highlight Median class, 4: interpolate, 5: result
+    let lastTime = 0;
+    let animationReq;
+
+    // --- CẤU HÌNH ĐỘ NÉT CAO CANVAS (RETINA/4K) ---
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    function scaleCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        width = rect.width;
+        height = rect.height;
+        
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        
+        ctx.scale(dpr, dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        
+        draw();
+    }
+    window.addEventListener('resize', scaleCanvas);
+
+    // --- ĐIỀU KHIỂN SỰ KIỆN ---
+    const styleToggle = document.getElementById('styleToggle');
+    const playPause = document.getElementById('playPause');
+    const resetBtn = document.getElementById('reset');
+    const timeSlider = document.getElementById('timeSlider');
+    const progressText = document.getElementById('progressText');
+
+    styleToggle.addEventListener('click', () => {
+        currentStyle = currentStyle === 'realistic' ? 'textbook' : 'realistic';
+        styleToggle.textContent = currentStyle === 'realistic' ? 'Đổi sang Sách giáo khoa' : 'Đổi sang Chân thực';
+        draw();
+    });
+
+    playPause.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        playPause.textContent = isPlaying ? '⏸ Tạm dừng' : '▶ Chạy Phân tích Trung vị';
+        if (isPlaying && stepIndex >= 5) resetAll();
+        if (isPlaying) requestAnimationFrame(loop);
+    });
+
+    resetBtn.addEventListener('click', resetAll);
+
+    timeSlider.addEventListener('input', (e) => {
+        stepIndex = parseInt(e.target.value);
+        progressText.textContent = `Tiến trình (${stepIndex}/5):`;
+        draw();
+    });
+
+    function resetAll() {
+        isPlaying = false;
+        playPause.textContent = '▶ Chạy Phân tích Trung vị';
+        stepIndex = 0;
+        timeSlider.value = 0;
+        progressText.textContent = `Tiến trình (0/5):`;
+        draw();
+    }
+
+    function loop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        if (timestamp - lastTime > 1500) { // Đợi 1.5s mỗi bước cho người xem kịp đọc
+            if (stepIndex < 5) {
+                stepIndex++;
+                timeSlider.value = stepIndex;
+                progressText.textContent = `Tiến trình (${stepIndex}/5):`;
+                lastTime = timestamp;
+                draw();
+            } else {
+                isPlaying = false;
+                playPause.textContent = '▶ Chạy Phân tích Trung vị';
+                return;
+            }
+        }
+        if (isPlaying) animationReq = requestAnimationFrame(loop);
+    }
+
+    // --- HÀM VẼ (2 CHẾ ĐỘ) ---
+    function draw() {
+        ctx.clearRect(0, 0, width, height);
+        if (currentStyle === 'realistic') drawRealistic();
+        else drawTextbook();
+    }
+
+    // Chế độ 1: Chân thực (Chủ đề Tốc độ Thể thao)
+    function drawRealistic() {
+        // Nền tối Gradient (Mô phỏng sân quần vợt / Bảng điện tử)
+        const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+        bgGradient.addColorStop(0, '#041525');
+        bgGradient.addColorStop(1, '#010a14');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, width, height);
+
+        const padX = 70, padY = 80;
+        const chartW = width - padX * 2;
+        const chartH = height - padY * 2;
+        const barW = chartW / data.length;
+        const maxFreq = 50;
+
+        // Vẽ lưới điện tử mờ
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        for(let i = 0; i <= maxFreq; i+=10) {
+            let y = height - padY - (i/maxFreq)*chartH;
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(width - padX, y); ctx.stroke();
+            
+            ctx.fillStyle = '#64748b';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(i, padX - 10, y + 5);
+        }
+
+        // Vẽ biểu đồ Histogram với hiệu ứng Neon
+        ctx.textAlign = 'center';
+        for (let i = 0; i < data.length; i++) {
+            const hBar = (data[i].freq / maxFreq) * chartH;
+            const x = padX + i * barW;
+            const y = height - padY - hBar;
+
+            // Xác định xem có phải là Median Class và đang ở step >= 3 không
+            const isMedianClass = (i === 3) && (stepIndex >= 3);
+            
+            // Đổ bóng & Gradient Cột
+            ctx.shadowColor = isMedianClass ? '#ff1744' : '#00e5ff';
+            ctx.shadowBlur = isMedianClass ? 25 : 15;
+            
+            const barGrad = ctx.createLinearGradient(0, y, 0, height - padY);
+            if (isMedianClass) {
+                barGrad.addColorStop(0, '#ff1744');
+                barGrad.addColorStop(1, '#b71c1c');
+            } else {
+                barGrad.addColorStop(0, '#00e5ff');
+                barGrad.addColorStop(1, '#0284c7');
+            }
+            
+            ctx.fillStyle = barGrad;
+            ctx.beginPath();
+            ctx.roundRect(x + 5, y, barW - 10, hBar, [4, 4, 0, 0]);
+            ctx.fill();
+            ctx.shadowBlur = 0; 
+            
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Số liệu (Tần số raw)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(data[i].freq, x + barW/2, y + 25);
+
+            // Nhãn dưới trục X
+            ctx.fillStyle = isMedianClass ? '#ff5252' : '#38bdf8';
+            ctx.font = 'bold 14px "Courier New"';
+            ctx.fillText(data[i].label, x + barW/2, height - padY + 25);
+
+            // Step 1+: Hiển thị Tần số tích lũy (cf) bay lên trên đầu cột
+            if (stepIndex >= 1) {
+                ctx.fillStyle = '#fbbf24'; // Vàng neon
+                ctx.font = 'bold 16px Courier New';
+                ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 10;
+                ctx.fillText(`cf=${data[i].cf}`, x + barW/2, y - 15);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // Bảng trạng thái góc trên (HUD)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.roundRect(padX, 15, 300, 50, 8);
+        ctx.fill();
+        ctx.strokeStyle = '#00e5ff';
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'left';
+        ctx.font = '16px Arial';
+        ctx.fillText(`Tổng N = 200`, padX + 20, 35);
+        ctx.fillText(`N/2 = 100`, padX + 160, 35);
+
+        // Step 2+: Cảnh báo giá trị 100
+        if (stepIndex >= 2) {
+            ctx.fillStyle = '#ff5252';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(`👉 cf vượt 100 tại nhóm [165; 170)`, padX + 320, 45);
+        }
+
+        // Step 4+: Hiển thị công thức Tính Nội Suy (Interpolation)
+        if (stepIndex >= 4) {
+            const medX = padX + 3 * barW + barW/2;
+            const medY = height - padY - (data[3].freq / maxFreq) * chartH - 60;
+            
+            // Hộp Công thức 
+            ctx.fillStyle = 'rgba(20, 20, 20, 0.9)';
+            ctx.roundRect(medX - 120, medY - 70, 240, 60, 8);
+            ctx.fill();
+            ctx.strokeStyle = '#ff1744'; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.font = '15px Courier New';
+            ctx.fillText(`Me = 165 + (100 - 81)/43 * 5`, medX, medY - 45);
+            
+            if (stepIndex === 5) {
+                ctx.fillStyle = '#00e5ff';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText(`Me ≈ 167.21 km/h`, medX, medY - 20);
+                
+                // Mũi tên chỉ xuống
+                ctx.beginPath();
+                ctx.moveTo(medX, medY - 10);
+                ctx.lineTo(medX, medY + 15);
+                ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(medX-5, medY+10); ctx.lineTo(medX, medY+20); ctx.lineTo(medX+5, medY+10); ctx.fillStyle='#00e5ff'; ctx.fill();
+            }
+        }
+    }
+
+    // Chế độ 2: Sách giáo khoa (Nền sáng, chuẩn khoa học)
+    function drawTextbook() {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        
+        const padX = 80, padY = 80;
+        const chartW = width - padX * 2;
+        const chartH = height - padY * 2;
+        const barW = chartW / data.length;
+        const maxFreq = 50;
+        
+        // Trục tọa độ 
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        
+        // Trục Y (Tần số)
+        ctx.beginPath(); ctx.moveTo(padX, padY - 20); ctx.lineTo(padX, height - padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(padX - 6, padY - 10); ctx.lineTo(padX, padY - 25); ctx.lineTo(padX + 6, padY - 10); ctx.fillStyle = '#000'; ctx.fill();
+
+        // Trục X (Tốc độ)
+        ctx.beginPath(); ctx.moveTo(padX, height - padY); ctx.lineTo(width - padX + 20, height - padY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(width - padX + 10, height - padY - 6); ctx.lineTo(width - padX + 25, height - padY); ctx.lineTo(width - padX + 10, height - padY + 6); ctx.fill();
+
+        // Lưới trục Y
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '15px Times New Roman';
+        for(let i = 0; i <= maxFreq; i+=10) {
+            let y = height - padY - (i/maxFreq)*chartH;
+            ctx.beginPath(); ctx.moveTo(padX - 5, y); ctx.lineTo(padX, y); ctx.stroke();
+            
+            ctx.save();
+            ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(width - padX, y); ctx.stroke();
+            ctx.restore();
+
+            ctx.fillText(i, padX - 10, y);
+        }
+
+        ctx.fillText("Số lần", padX + 40, padY - 30);
+        ctx.fillText("Tốc độ v (km/h)", width - padX + 30, height - padY + 35);
+
+        // Vẽ biểu đồ Histogram
+        ctx.textAlign = 'center';
+        for (let i = 0; i < data.length; i++) {
+            const hBar = (data[i].freq / maxFreq) * chartH;
+            const x = padX + i * barW;
+            const y = height - padY - hBar;
+
+            const isMedianClass = (i === 3) && (stepIndex >= 3);
+
+            // Hình chữ nhật
+            ctx.fillStyle = isMedianClass ? '#ffcdd2' : '#e3f2fd'; // Đỏ nhạt hoặc xanh nhạt
+            ctx.fillRect(x, y, barW, hBar);
+            
+            ctx.strokeStyle = isMedianClass ? '#c62828' : '#1565c0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, barW, hBar);
+
+            // Tần số (Số lần)
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 16px Times New Roman';
+            ctx.fillText(data[i].freq, x + barW/2, y + 20);
+
+            // Tần số tích lũy
+            if (stepIndex >= 1) {
+                ctx.fillStyle = '#d32f2f';
+                ctx.font = 'italic 16px Times New Roman';
+                ctx.fillText(`cf=${data[i].cf}`, x + barW/2, y - 10);
+            }
+
+            // Nhãn X
+            ctx.fillStyle = '#000000';
+            ctx.font = '15px Times New Roman';
+            ctx.fillText(data[i].label, x + barW/2, height - padY + 20);
+        }
+
+        // Logic & Phân tích SGK
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#000';
+        ctx.font = '18px Times New Roman';
+        
+        ctx.fillText(`N = 200  =>  N/2 = 100`, padX + 20, 30);
+
+        if (stepIndex >= 2) {
+            ctx.fillStyle = '#c62828';
+            ctx.fillText(`Giá trị thứ 100 rơi vào nhóm có cf = 124`, padX + 250, 30);
+        }
+
+        if (stepIndex >= 3) {
+            ctx.fillText(`=> Nhóm chứa trung vị: [165; 170)`, padX + 250, 55);
+        }
+
+        if (stepIndex >= 4) {
+            const medX = padX + 3 * barW + barW/2;
+            const medY = height - padY - (data[3].freq / maxFreq) * chartH - 70;
+            
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Me = 165 + [(100 - 81)/43] × 5`, medX, medY);
+            
+            if (stepIndex === 5) {
+                ctx.fillStyle = '#d32f2f';
+                ctx.font = 'bold 20px Times New Roman';
+                ctx.fillText(`Me ≈ 167.21 (km/h)`, medX, medY + 25);
+            }
+        }
+    }
+
+    // --- TIỆN ÍCH HỖ TRỢ ---
+    function toggleFullScreen() {
+        const wrap = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (wrap.requestFullscreen) wrap.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
+    function closeApp() {
+        if (confirm("Thầy có chắc chắn muốn thoát mô phỏng và đóng tab này không?")) {
+            window.close();
+            document.body.innerHTML = "<h2 style='text-align:center; margin-top:20vh; color:var(--accent-color);'>Mô phỏng đã được đóng. Thầy có thể tắt tab trình duyệt này.</h2>";
+        }
+    }
+
+    window.onload = () => {
+        scaleCanvas();
+        resetAll();
+    };
+</script>
+
+</body>
+</html>
